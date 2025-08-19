@@ -138,3 +138,5 @@ HaruKok-BE/
 ├── 📄 tsconfig.json                            # TypeScript 설정
 └── 📄 WEB_MONITORING_GUIDE.md                  # 웹 모니터링 가이드
 ```
+
+test
