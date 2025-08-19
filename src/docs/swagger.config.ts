@@ -12,7 +12,9 @@ export function setupSwagger(app: INestApplication): void {
         .addBearerAuth()
         .build();
 
-    const document = SwaggerModule.createDocument(app, config);
+    const document = SwaggerModule.createDocument(app, config, {
+        deepScanRoutes: true, // 라우트 깊이 스캔
+    });
     SwaggerModule.setup('api-docs', app, document);
     console.log('Swagger UI is available at: /api-docs');
     console.log('API 문서가 Swagger UI에서 확인 가능합니다.');
