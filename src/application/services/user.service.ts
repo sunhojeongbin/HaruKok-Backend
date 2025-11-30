@@ -1,10 +1,17 @@
 // src/application/services/user.service.ts
-import { Injectable, NotFoundException, ConflictException, Inject } from '@nestjs/common';
+import {
+    Injectable,
+    NotFoundException,
+    ConflictException,
+    Inject,
+    UseGuards,
+} from '@nestjs/common';
 import { BaseService } from '../../common/services/base.service';
 import { IUserRepository, User, FindAllOptions } from '../../core/interfaces/repository.interface';
 import { CreateUserDto, UpdateUserDto, UserResponseDto } from '../dto/user.dto';
 import { ApiResponseDto, SuccessResponseDto } from '../../common/dto/api-response.dto';
 import { CustomLoggerService } from '../../common/services/logger.service';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
 @Injectable()
 export class UserService extends BaseService {
@@ -71,6 +78,7 @@ export class UserService extends BaseService {
         }, 'getUserById');
     }
 
+    // @UseGuards(JwtAuthGuard)
     async getAllUsers(options?: FindAllOptions): Promise<SuccessResponseDto<any>> {
         return this.safeExecute(async () => {
             this.customLogger.log('Fetching all users', 'USER_SERVICE');

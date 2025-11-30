@@ -10,14 +10,19 @@ import {
     Query,
     ParseIntPipe,
     ValidationPipe,
+    UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiResponse, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiResponse, ApiOperation, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { UserService } from '../../application/services/user.service';
 import { CreateUserDto, UpdateUserDto, UserResponseDto } from '../../application/dto/user.dto';
 import { SuccessResponseDto } from '../../common/dto/api-response.dto';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { Public } from '../../common/decorators/public.decorator';
+import { User } from '../../common/decorators/user.decorator';
 
 @ApiTags('Users')
 @Controller('users')
+@ApiBearerAuth() // Swagger에서 Bearer 토큰 인증 표시
 export class UserController {
     constructor(private readonly userService: UserService) {}
 
@@ -78,6 +83,18 @@ export class UserController {
         return await this.userService.getActiveUsers(options);
     }
 
+    @Get('profile')
+    @ApiOperation({ summary: '현재 사용자 프로필 조회' })
+    @ApiResponse({
+        status: 200,
+        description: '사용자 프로필 조회 성공',
+        type: SuccessResponseDto<UserResponseDto>,
+    })
+    @ApiResponse({ status: 401, description: '인증되지 않은 사용자' })
+    async getProfile(@User() user: any): Promise<SuccessResponseDto<UserResponseDto>> {
+        return await this.userService.getUserById(user.id);
+    }
+
     @Get(':id')
     @ApiOperation({ summary: '사용자 단건 조회' })
     @ApiResponse({
@@ -86,12 +103,14 @@ export class UserController {
         type: SuccessResponseDto<UserResponseDto>,
     })
     @ApiResponse({ status: 404, description: '사용자를 찾을 수 없습니다.' })
+    @ApiResponse({ status: 401, description: '인증되지 않은 사용자' })
     async getUserById(@Param('id') id: string): Promise<SuccessResponseDto<UserResponseDto>> {
         return await this.userService.getUserById(id);
     }
 
     @Post()
-    @ApiOperation({ summary: '사용자 생성' })
+    @Public() // 회원가입은 인증 없이 접근 가능
+    @ApiOperation({ summary: '사용자 생성 (회원가입)' })
     @ApiResponse({
         status: 201,
         description: '사용자 생성 성공',
