@@ -1,15 +1,18 @@
 import { Body, Controller, Post, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { LoginDto } from './dtos/login.dto';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('인증')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('login')
-  login(@Body() body: { email: string; password: string }) {
-    const user = this.authService.login(body.email, body.password);
+  login(@Body() dto: LoginDto) {
+    const result = this.authService.login(dto.email, dto.password);
 
-    if (!user) {
+    if (!result) {
       throw new UnauthorizedException(
         '아이디 또는 비밀번호가 올바르지 않습니다.',
       );
@@ -17,7 +20,8 @@ export class AuthController {
 
     return {
       success: true,
-      user,
+      user: result.user,
+      accessToken: result.accessToken,
     };
   }
 }
