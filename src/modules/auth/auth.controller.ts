@@ -1,15 +1,10 @@
-import {
-  Body,
-  Controller,
-  Post,
-  UnauthorizedException,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
+import { Body, Controller, Post, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dtos/login.dto';
 import { ApiResponseDto } from '../../common/dto/api-response.dto';
+import { BusinessException } from 'src/common/exceptions/business.exception';
+import { AuthResponse } from 'src/common/response/auth.response';
 
 export class LoginResponseDto {
   user: {
@@ -63,9 +58,7 @@ export class AuthController {
     const result = this.authService.login(dto.email, dto.password);
 
     if (!result) {
-      throw new UnauthorizedException(
-        '아이디 또는 비밀번호가 올바르지 않습니다.',
-      );
+      throw new BusinessException(AuthResponse.LOGIN_FAIL);
     }
 
     return ApiResponseDto.success<LoginResponseDto>(
