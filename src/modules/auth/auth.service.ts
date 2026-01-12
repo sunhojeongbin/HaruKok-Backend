@@ -31,4 +31,16 @@ export class AuthService {
 
     return null;
   }
+
+  /** @description 사용자 정보 조회 메서드 */
+  getUserById(userId: number) {
+    if (userId === this.USER.id) {
+      return {
+        id: this.USER.id,
+        name: this.USER.name,
+        email: this.USER.email,
+      };
+    }
+    return null;
+  }
 }

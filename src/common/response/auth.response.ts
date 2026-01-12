@@ -21,4 +21,13 @@ export const AuthResponse = {
     message: '아이디 또는 비밀번호가 올바르지 않습니다.',
     errorCode: 'UNAUTHORIZED',
   },
+  USER_FOUND: {
+    httpCode: 200,
+    message: '사용자 정보 조회에 성공했습니다.',
+  },
+  USER_NOT_FOUND: {
+    httpCode: 404,
+    message: '사용자를 찾을 수 없습니다.',
+    errorCode: 'USER_NOT_FOUND',
+  },
 } as const satisfies Record<string, ResponseCode>;
