@@ -36,5 +36,5 @@ jobs:
           push: true
           platforms: linux/amd64
           tags: |
-            ghcr.io/${{ github.repository }}:dev
-            ghcr.io/${{ github.repository }}:dev-${{ github.sha }}
+            ghcr.io/sunhojeongbin/harukok-backend:dev
+            ghcr.io/sunhojeongbin/harukok-backend:dev-${{ github.sha }}
