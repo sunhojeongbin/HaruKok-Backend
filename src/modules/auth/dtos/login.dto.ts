@@ -23,12 +23,11 @@ export class LoginDto {
 }
 
 export class LoginResponseDto {
-  @ApiProperty({ description: '사용자 정보' })
-  user: {
-    id: string;
-    email: string;
-    name: string;
-  };
+  @ApiProperty({ description: '사용자 이메일' })
+  email: string;
+
+  @ApiProperty({ description: '사용자 이름' })
+  name: string;
 
   @ApiProperty({ description: '액세스 토큰' })
   accessToken: string;

@@ -27,11 +27,8 @@ import { VerifyEmailCodeDto } from './dtos/verify-email-code.dto';
 import { SignupDto } from './dtos/signup.dto';
 
 export class LoginResponseDto {
-  user: {
-    id: string;
-    email: string;
-    name: string;
-  };
+  email: string;
+  name: string;
   accessToken: string;
 }
 
@@ -159,11 +156,8 @@ export class AuthController {
         message: '로그인 성공',
         success: true,
         data: {
-          user: {
-            id: '8128ec5d-ed76-4510-89f3-d362ce6f572c',
-            email: 'user@example.com',
-            name: '홍길동',
-          },
+          email: 'user@example.com',
+          name: '홍길동',
           accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
         },
       },
@@ -190,7 +184,8 @@ export class AuthController {
 
     return ApiResponseDto.success<LoginResponseDto>(
       {
-        user: result.user,
+        email: result.email,
+        name: result.name,
         accessToken: result.accessToken,
       },
       '로그인 성공',

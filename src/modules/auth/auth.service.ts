@@ -6,9 +6,8 @@ import { JwtService } from '@nestjs/jwt';
 import { emailCodeHash } from '../../common/crypto/hash.util';
 import { BusinessException } from '../../common/exceptions/business.exception';
 import { AuthResponse } from '../../common/response/auth.response';
-import { InjectRepository } from '@nestjs/typeorm';
-import { QueryFailedError, Repository } from 'typeorm';
-import { UsrEntity } from './entities/usr.entity';
+import { QueryFailedError } from 'typeorm';
+import { UsersRepository } from '../users/repositories/users.repository';
 
 type EmailVerificationCodeEntry = {
   codeHash: string;
@@ -23,11 +22,8 @@ type SignupPayload = {
 };
 
 type LoginResult = {
-  user: {
-    id: string;
-    email: string;
-    name: string;
-  };
+  email: string;
+  name: string;
   accessToken: string;
 };
 
@@ -49,8 +45,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly mail: MailService,
     @Optional()
-    @InjectRepository(UsrEntity)
-    private readonly userRepository?: Repository<UsrEntity>,
+    private readonly usersRepository?: UsersRepository,
   ) {}
 
   private readonly CODE_TTL_SEC = 10 * 60;
@@ -78,11 +73,11 @@ export class AuthService {
     return name.trim();
   }
 
-  private getUserRepository(): Repository<UsrEntity> {
-    if (!this.userRepository) {
+  private getUsersRepository(): UsersRepository {
+    if (!this.usersRepository || !this.usersRepository.isReady()) {
       throw new BusinessException(AuthResponse.USER_REPOSITORY_NOT_READY);
     }
-    return this.userRepository;
+    return this.usersRepository;
   }
 
   private getEmailCodeSecret(): string {
@@ -193,23 +188,21 @@ export class AuthService {
       throw new BusinessException(AuthResponse.SIGNUP_EMAIL_MISMATCH);
     }
 
-    const repo = this.getUserRepository();
-    const existing = await repo.findOne({
-      where: { usrEmail: normalizedEmail },
-    });
+    const repo = this.getUsersRepository();
+    const existing = await repo.findByEmail(normalizedEmail);
     if (existing) {
       throw new BusinessException(AuthResponse.SIGNUP_ALREADY_EXISTS);
     }
 
     const hashedPassword = await bcrypt.hash(password, this.getBcryptRounds());
-    const user = repo.create({
+    const user = {
       usrEmail: normalizedEmail,
       usrName: normalizedName,
       password: hashedPassword,
-    });
+    };
 
     try {
-      const saved = await repo.save(user);
+      const saved = await repo.createAndSave(user);
       return {
         id: saved.usrId,
         email: saved.usrEmail ?? '',
@@ -232,7 +225,7 @@ export class AuthService {
   async login(email: string, password: string): Promise<LoginResult | null> {
     const normalizedEmail = this.normalizeEmail(email);
 
-    if (!this.userRepository) {
+    if (!this.usersRepository || !this.usersRepository.isReady()) {
       if (
         normalizedEmail === this.FALLBACK_USER.email &&
         password === this.FALLBACK_USER.password
@@ -243,20 +236,15 @@ export class AuthService {
         };
         const accessToken = this.jwtService.sign(payload);
         return {
-          user: {
-            id: this.FALLBACK_USER.id,
-            name: this.FALLBACK_USER.name,
-            email: this.FALLBACK_USER.email,
-          },
+          name: this.FALLBACK_USER.name,
+          email: this.FALLBACK_USER.email,
           accessToken,
         };
       }
       return null;
     }
 
-    const user = await this.userRepository.findOne({
-      where: { usrEmail: normalizedEmail },
-    });
+    const user = await this.usersRepository.findByEmail(normalizedEmail);
     if (!user) {
       return null;
     }
@@ -273,18 +261,15 @@ export class AuthService {
     const accessToken = this.jwtService.sign(payload);
 
     return {
-      user: {
-        id: user.usrId,
-        name: user.usrName,
-        email: user.usrEmail ?? '',
-      },
+      name: user.usrName,
+      email: user.usrEmail ?? '',
       accessToken,
     };
   }
 
   /** @description 사용자 정보 조회 메서드 */
   async getUserById(userId: string): Promise<UserProfile | null> {
-    if (!this.userRepository) {
+    if (!this.usersRepository || !this.usersRepository.isReady()) {
       if (userId === this.FALLBACK_USER.id) {
         return {
           id: this.FALLBACK_USER.id,
@@ -295,9 +280,7 @@ export class AuthService {
       return null;
     }
 
-    const user = await this.userRepository.findOne({
-      where: { usrId: userId },
-    });
+    const user = await this.usersRepository.findById(userId);
     if (!user) {
       return null;
     }
