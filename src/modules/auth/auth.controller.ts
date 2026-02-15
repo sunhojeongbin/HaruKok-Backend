@@ -5,21 +5,18 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  UseGuards,
   Request,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dtos/login.dto';
 import { ApiResponseDto } from '../../common/dto/api-response.dto';
 import { BusinessException } from 'src/common/exceptions/business.exception';
 import { AuthResponse } from 'src/common/response/auth.response';
-import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+// import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { SendEmailCodeDto } from './dtos/send-email-code.dto';
+import { VerifyEmailCodeDto } from './dtos/verify-email-code.dto';
+import { SignupDto } from './dtos/signup.dto';
 
 export class LoginResponseDto {
   user: {
@@ -34,6 +31,88 @@ export class LoginResponseDto {
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @Post('email/send')
+  @ApiOperation({ summary: '이메일 인증 코드 전송' })
+  @ApiBody({
+    schema: {
+      example: {
+        email: 'user@example.com',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: '코드 전송 성공',
+    schema: {
+      example: { ok: true },
+    },
+  })
+  // async를 붙일 필요가 없나?
+  send(@Body() dto: SendEmailCodeDto) {
+    return this.authService.sendEmailCode(dto.email);
+  }
+
+  @Post('email/verify')
+  @ApiOperation({ summary: '이메일 인증 코드 검증' })
+  @ApiBody({
+    schema: {
+      example: {
+        email: 'user@example.com',
+        code: '123456',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: '인증 성공 및 signupToken 발급',
+    schema: {
+      example: {
+        ok: true,
+        signupToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...signup-token',
+      },
+    },
+  })
+  verify(@Body() dto: VerifyEmailCodeDto) {
+    return this.authService.verifyEmailCode(dto.email, dto.code);
+  }
+
+  @Post('signup')
+  @ApiOperation({ summary: '회원가입 (인증 토큰 필요)' })
+  @ApiBody({
+    schema: {
+      example: {
+        email: 'user@example.com',
+        password: 'strongPassw0rd!',
+        name: '홍길동',
+        signupToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...signup-token',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: '회원가입 처리 완료',
+    schema: {
+      example: { ok: true },
+    },
+  })
+  async signup(@Body() dto: SignupDto) {
+    const emailFromToken = await this.authService.assertSignupToken(
+      dto.signupToken,
+    );
+
+    // 여기서 dto.email이 토큰의 email과 동일한지도 체크 권장
+    if (dto.email !== emailFromToken) {
+      // 토큰 탈취/혼용 방지
+      throw new Error('email mismatch'); // 실제론 BadRequestException
+    }
+
+    // TODO: 유저 생성 로직
+    // - email unique 체크
+    // - password 해시 (argon2/bcrypt)
+    // - email_verified_at = now()
+    return { ok: true };
+  }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
