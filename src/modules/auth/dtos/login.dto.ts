@@ -25,7 +25,7 @@ export class LoginDto {
 export class LoginResponseDto {
   @ApiProperty({ description: '사용자 정보' })
   user: {
-    id: number;
+    id: string;
     email: string;
     name: string;
   };

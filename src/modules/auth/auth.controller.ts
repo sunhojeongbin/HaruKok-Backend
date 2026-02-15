@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Post,
@@ -29,7 +28,7 @@ import { SignupDto } from './dtos/signup.dto';
 
 export class LoginResponseDto {
   user: {
-    id: number;
+    id: string;
     email: string;
     name: string;
   };
@@ -54,12 +53,22 @@ export class AuthController {
     status: 200,
     description: '코드 전송 성공',
     schema: {
-      example: { ok: true },
+      example: {
+        httpCode: 200,
+        message: '이메일 인증 코드가 발송되었습니다.',
+        success: true,
+        data: { ok: true },
+      },
     },
   })
   // async를 붙일 필요가 없나?
-  send(@Body() dto: SendEmailCodeDto) {
-    return this.authService.sendEmailCode(dto.email);
+  async send(@Body() dto: SendEmailCodeDto) {
+    const result = await this.authService.sendEmailCode(dto.email);
+    return ApiResponseDto.success(
+      result,
+      AuthResponse.EMAIL_CODE_SENT.message,
+      AuthResponse.EMAIL_CODE_SENT.httpCode,
+    );
   }
 
   @Post('email/verify')
@@ -77,13 +86,23 @@ export class AuthController {
     description: '인증 성공 및 signupToken 발급',
     schema: {
       example: {
-        ok: true,
-        signupToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...signup-token',
+        httpCode: 200,
+        message: '이메일 인증이 완료되었습니다.',
+        success: true,
+        data: {
+          ok: true,
+          signupToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...signup-token',
+        },
       },
     },
   })
   verify(@Body() dto: VerifyEmailCodeDto) {
-    return this.authService.verifyEmailCode(dto.email, dto.code);
+    const result = this.authService.verifyEmailCode(dto.email, dto.code);
+    return ApiResponseDto.success(
+      result,
+      AuthResponse.EMAIL_CODE_VERIFIED.message,
+      AuthResponse.EMAIL_CODE_VERIFIED.httpCode,
+    );
   }
 
   @Post('signup')
@@ -99,27 +118,33 @@ export class AuthController {
     },
   })
   @ApiResponse({
-    status: 200,
+    status: 201,
     description: '회원가입 처리 완료',
     schema: {
-      example: { ok: true },
+      example: {
+        httpCode: 201,
+        message: '회원가입이 완료되었습니다.',
+        success: true,
+        data: {
+          id: '8128ec5d-ed76-4510-89f3-d362ce6f572c',
+          email: 'user@example.com',
+          name: '홍길동',
+        },
+      },
     },
   })
-  signup(@Body() dto: SignupDto) {
-    const emailFromToken = this.authService.assertSignupToken(dto.signupToken);
-    const normalizedEmail = dto.email.trim().toLowerCase();
-
-    if (normalizedEmail !== emailFromToken) {
-      throw new BadRequestException(
-        '이메일 인증 토큰과 요청 이메일이 다릅니다.',
-      );
-    }
-
-    // TODO: 유저 생성 로직
-    // - email unique 체크
-    // - password 해시 (argon2/bcrypt)
-    // - email_verified_at = now()
-    return { ok: true };
+  async signup(@Body() dto: SignupDto) {
+    const user = await this.authService.signup(
+      dto.email,
+      dto.password,
+      dto.name,
+      dto.signupToken,
+    );
+    return ApiResponseDto.success(
+      user,
+      AuthResponse.SIGNUP_SUCCESS.message,
+      AuthResponse.SIGNUP_SUCCESS.httpCode,
+    );
   }
 
   @Post('login')
@@ -135,7 +160,7 @@ export class AuthController {
         success: true,
         data: {
           user: {
-            id: 1,
+            id: '8128ec5d-ed76-4510-89f3-d362ce6f572c',
             email: 'user@example.com',
             name: '홍길동',
           },
@@ -156,8 +181,8 @@ export class AuthController {
       },
     },
   })
-  login(@Body() dto: LoginDto) {
-    const result = this.authService.login(dto.email, dto.password);
+  async login(@Body() dto: LoginDto) {
+    const result = await this.authService.login(dto.email, dto.password);
 
     if (!result) {
       throw new BusinessException(AuthResponse.LOGIN_FAIL);
@@ -185,7 +210,7 @@ export class AuthController {
         message: '사용자 정보 조회 성공',
         success: true,
         data: {
-          id: 1,
+          id: '8128ec5d-ed76-4510-89f3-d362ce6f572c',
           email: 'test@gmail.com',
           name: '최정빈',
         },
@@ -204,13 +229,13 @@ export class AuthController {
       },
     },
   })
-  getMe(@Request() req: { user?: { userId?: number } }) {
+  async getMe(@Request() req: { user?: { userId?: string } }) {
     const userId = req.user?.userId;
     if (!userId) {
       throw new UnauthorizedException('인증에 실패했습니다.');
     }
 
-    const user = this.authService.getUserById(userId);
+    const user = await this.authService.getUserById(userId);
 
     if (!user) {
       throw new BusinessException(AuthResponse.USER_NOT_FOUND);
