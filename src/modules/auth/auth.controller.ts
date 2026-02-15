@@ -1,19 +1,28 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Post,
   Get,
   HttpCode,
   HttpStatus,
+  UnauthorizedException,
+  UseGuards,
   Request,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dtos/login.dto';
 import { ApiResponseDto } from '../../common/dto/api-response.dto';
-import { BusinessException } from 'src/common/exceptions/business.exception';
-import { AuthResponse } from 'src/common/response/auth.response';
-// import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { BusinessException } from '../../common/exceptions/business.exception';
+import { AuthResponse } from '../../common/response/auth.response';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { SendEmailCodeDto } from './dtos/send-email-code.dto';
 import { VerifyEmailCodeDto } from './dtos/verify-email-code.dto';
 import { SignupDto } from './dtos/signup.dto';
@@ -96,15 +105,14 @@ export class AuthController {
       example: { ok: true },
     },
   })
-  async signup(@Body() dto: SignupDto) {
-    const emailFromToken = await this.authService.assertSignupToken(
-      dto.signupToken,
-    );
+  signup(@Body() dto: SignupDto) {
+    const emailFromToken = this.authService.assertSignupToken(dto.signupToken);
+    const normalizedEmail = dto.email.trim().toLowerCase();
 
-    // 여기서 dto.email이 토큰의 email과 동일한지도 체크 권장
-    if (dto.email !== emailFromToken) {
-      // 토큰 탈취/혼용 방지
-      throw new Error('email mismatch'); // 실제론 BadRequestException
+    if (normalizedEmail !== emailFromToken) {
+      throw new BadRequestException(
+        '이메일 인증 토큰과 요청 이메일이 다릅니다.',
+      );
     }
 
     // TODO: 유저 생성 로직
@@ -165,8 +173,8 @@ export class AuthController {
   }
 
   @Get('me')
-  //   @UseGuards(JwtAuthGuard)
-  //   @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: '현재 사용자 정보 조회' })
   @ApiResponse({
     status: 200,
@@ -196,8 +204,13 @@ export class AuthController {
       },
     },
   })
-  getMe() {
-    const user = this.authService.getUserById(1);
+  getMe(@Request() req: { user?: { userId?: number } }) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new UnauthorizedException('인증에 실패했습니다.');
+    }
+
+    const user = this.authService.getUserById(userId);
 
     if (!user) {
       throw new BusinessException(AuthResponse.USER_NOT_FOUND);

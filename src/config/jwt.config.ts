@@ -1,13 +1,20 @@
+import { ConfigService } from '@nestjs/config';
 import { JwtModuleOptions } from '@nestjs/jwt';
 import { StringValue } from 'ms';
 
-export const JWT_SECRET = process.env.JWT_SECRET ?? 'dev-secret';
-const JWT_EXPIRES_IN: StringValue =
-  (process.env.JWT_EXPIRES_IN as StringValue) ?? '1h';
+export function getJwtModuleOptions(config: ConfigService): JwtModuleOptions {
+  const secret = config.get<string>('JWT_SECRET');
+  if (!secret) {
+    throw new Error('JWT_SECRET 환경변수가 필요합니다.');
+  }
 
-export const jwtModuleOptions: JwtModuleOptions = {
-  secret: JWT_SECRET,
-  signOptions: {
-    expiresIn: JWT_EXPIRES_IN,
-  },
-};
+  const expiresIn = (config.get<string>('JWT_EXPIRES_IN') ??
+    '1h') as StringValue;
+
+  return {
+    secret,
+    signOptions: {
+      expiresIn,
+    },
+  };
+}
