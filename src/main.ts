@@ -5,6 +5,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -19,7 +20,10 @@ async function bootstrap() {
   );
 
   /** @description 글로벌 응답 변환 인터셉터 */
-  app.useGlobalInterceptors(new TransformInterceptor());
+  app.useGlobalInterceptors(
+    new LoggingInterceptor(),
+    new TransformInterceptor(),
+  );
 
   /** @description 글로벌 예외 필터 */
   app.useGlobalFilters(new GlobalExceptionFilter());
@@ -34,9 +38,69 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document, {
-    swaggerOptions: { persistAuthorization: true },
+    swaggerOptions: {
+      persistAuthorization: true,
+      responseInterceptor: (response: {
+        status?: number;
+        url?: string;
+        body?: unknown;
+        data?: unknown;
+        text?: string;
+      }) => {
+        try {
+          if (!response.url?.includes('/auth/login')) {
+            return response;
+          }
+
+          if (
+            !response.status ||
+            response.status < 200 ||
+            response.status >= 300
+          ) {
+            return response;
+          }
+
+          let payload:
+            | {
+                data?: {
+                  accessToken?: string;
+                };
+              }
+            | undefined =
+            (response.body as
+              | { data?: { accessToken?: string } }
+              | undefined) ??
+            (response.data as { data?: { accessToken?: string } } | undefined);
+          if (!payload && typeof response.text === 'string') {
+            payload = JSON.parse(response.text) as {
+              data?: {
+                accessToken?: string;
+              };
+            };
+          }
+
+          const accessToken = payload?.data?.accessToken;
+          if (accessToken) {
+            const swaggerWindow = window as Window & {
+              ui?: {
+                preauthorizeApiKey?: (name: string, value: string) => void;
+              };
+            };
+            const preauthorizeApiKey = swaggerWindow.ui?.preauthorizeApiKey;
+            if (typeof preauthorizeApiKey === 'function') {
+              preauthorizeApiKey('bearer', accessToken);
+              preauthorizeApiKey('Bearer', accessToken);
+            }
+          }
+        } catch {
+          // Swagger interceptor 내부 파싱 실패는 무시하고 원 응답을 유지
+        }
+
+        return response;
+      },
+    },
   });
 
   await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
 }
-bootstrap();
+void bootstrap();
