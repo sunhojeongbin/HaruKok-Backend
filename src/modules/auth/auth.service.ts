@@ -1,6 +1,6 @@
 import { Injectable, Optional } from '@nestjs/common';
 import * as crypto from 'crypto';
-import * as bcrypt from 'bcrypt';
+import * as argon2 from 'argon2';
 import { MailService } from '../mail/mail.service';
 import { JwtService } from '@nestjs/jwt';
 import { emailCodeHash } from '../../common/crypto/hash.util';
@@ -51,7 +51,10 @@ export class AuthService {
   private readonly CODE_TTL_SEC = 10 * 60;
   private readonly SIGNUP_TTL_SEC = 30 * 60;
   private readonly MAX_VERIFY_ATTEMPTS = 5;
-  private readonly DEFAULT_BCRYPT_ROUNDS = 12;
+  private readonly DEFAULT_ARGON2_TIME_COST = 3;
+  private readonly DEFAULT_ARGON2_MEMORY_COST = 65536;
+  private readonly DEFAULT_ARGON2_PARALLELISM = 1;
+  private readonly DEFAULT_ARGON2_HASH_LENGTH = 32;
   private readonly emailCodeStore = new Map<
     string,
     EmailVerificationCodeEntry
@@ -88,12 +91,47 @@ export class AuthService {
     return secret;
   }
 
-  private getBcryptRounds(): number {
-    const envRounds = Number(process.env.BCRYPT_SALT_ROUNDS);
-    if (Number.isInteger(envRounds) && envRounds >= 10 && envRounds <= 15) {
-      return envRounds;
+  private parseArgon2Number(
+    value: string | undefined,
+    fallback: number,
+    min: number,
+    max: number,
+  ): number {
+    const parsed = Number(value);
+    if (Number.isInteger(parsed) && parsed >= min && parsed <= max) {
+      return parsed;
     }
-    return this.DEFAULT_BCRYPT_ROUNDS;
+    return fallback;
+  }
+
+  private getArgon2Options(): argon2.Options & { raw?: false } {
+    return {
+      type: argon2.argon2id,
+      timeCost: this.parseArgon2Number(
+        process.env.ARGON2_TIME_COST,
+        this.DEFAULT_ARGON2_TIME_COST,
+        2,
+        10,
+      ),
+      memoryCost: this.parseArgon2Number(
+        process.env.ARGON2_MEMORY_COST,
+        this.DEFAULT_ARGON2_MEMORY_COST,
+        19456,
+        262144,
+      ),
+      parallelism: this.parseArgon2Number(
+        process.env.ARGON2_PARALLELISM,
+        this.DEFAULT_ARGON2_PARALLELISM,
+        1,
+        8,
+      ),
+      hashLength: this.parseArgon2Number(
+        process.env.ARGON2_HASH_LENGTH,
+        this.DEFAULT_ARGON2_HASH_LENGTH,
+        16,
+        64,
+      ),
+    };
   }
 
   async sendEmailCode(email: string) {
@@ -194,11 +232,11 @@ export class AuthService {
       throw new BusinessException(AuthResponse.SIGNUP_ALREADY_EXISTS);
     }
 
-    const hashedPassword = await bcrypt.hash(password, this.getBcryptRounds());
+    const hashedPassword = await argon2.hash(password, this.getArgon2Options());
     const user = {
       usrEmail: normalizedEmail,
       usrName: normalizedName,
-      password: hashedPassword,
+      passwordHash: hashedPassword,
     };
 
     try {
@@ -249,7 +287,11 @@ export class AuthService {
       return null;
     }
 
-    const passwordMatched = await bcrypt.compare(password, user.password);
+    if (!user.passwordHash) {
+      return null;
+    }
+
+    const passwordMatched = await argon2.verify(user.passwordHash, password);
     if (!passwordMatched) {
       return null;
     }
