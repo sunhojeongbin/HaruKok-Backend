@@ -6,7 +6,7 @@ import { UsrEntity } from '../entities/usr.entity';
 type CreateUserParams = {
   usrEmail: string;
   usrName: string;
-  password: string;
+  passwordHash: string;
 };
 
 @Injectable()
