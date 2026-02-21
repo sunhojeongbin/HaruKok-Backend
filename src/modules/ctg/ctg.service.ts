@@ -209,9 +209,7 @@ export class CtgService {
       for (let i = 0; i < restCategories.length; i += 1) {
         restCategories[i].sortOrder = i;
       }
-      await Promise.all(
-        restCategories.map((restCategory) => repo.save(restCategory)),
-      );
+      await repo.saveMany(restCategories);
       return { ctgId };
     } catch {
       throw new BusinessException(CtgResponse.CATEGORY_DELETE_FAILED);
