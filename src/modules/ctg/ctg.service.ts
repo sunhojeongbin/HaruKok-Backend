@@ -63,8 +63,8 @@ export class CtgService {
       throw new BusinessException(CtgResponse.CATEGORY_NAME_INVALID);
     }
 
-    const categoryCount = await repo.countActiveByUserId(userId);
-    if (categoryCount >= this.MAX_CATEGORY_COUNT) {
+    const categories = await repo.findAllByUser(userId);
+    if (categories.length >= this.MAX_CATEGORY_COUNT) {
       throw new BusinessException(CtgResponse.CATEGORY_LIMIT_EXCEEDED);
     }
 
@@ -73,13 +73,18 @@ export class CtgService {
       throw new BusinessException(CtgResponse.CATEGORY_NAME_DUPLICATED);
     }
 
+    const maxSortOrder = categories.reduce(
+      (max, category) => Math.max(max, category.sortOrder),
+      -1,
+    );
+
     try {
       const category = await repo.createAndSave({
         usrId: userId,
         ctgName: normalizedName,
         visibility: dto.visibility ?? VisibilityType.FRIENDS,
         colorCode: dto.colorCode ?? '#000000',
-        sortOrder: dto.sortOrder ?? 0,
+        sortOrder: maxSortOrder + 1,
       });
 
       return this.toCategoryResult(category);
@@ -135,10 +140,6 @@ export class CtgService {
       category.colorCode = dto.colorCode;
     }
 
-    if (dto.sortOrder !== undefined) {
-      category.sortOrder = dto.sortOrder;
-    }
-
     if (dto.isEnded !== undefined) {
       category.isEnded = dto.isEnded;
       category.endedAt = dto.isEnded ? new Date() : null;
@@ -172,6 +173,11 @@ export class CtgService {
 
     try {
       await repo.save(category);
+      const restCategories = await repo.findAllByUser(userId);
+      for (let i = 0; i < restCategories.length; i += 1) {
+        restCategories[i].sortOrder = i;
+      }
+      await repo.saveMany(restCategories);
       return { ctgId };
     } catch {
       throw new BusinessException(CtgResponse.CATEGORY_DELETE_FAILED);
@@ -191,5 +197,42 @@ export class CtgService {
     const repo = this.getCtgRepository();
     const categories = await repo.findAllByUser(userId);
     return categories.map((category) => this.toCategoryResult(category));
+  }
+
+  async reorder(userId: string, ctgIds: string[]): Promise<CategoryResult[]> {
+    const repo = this.getCtgRepository();
+    const categories = await repo.findAllByUser(userId);
+    if (ctgIds.length !== categories.length) {
+      throw new BusinessException(CtgResponse.CATEGORY_ORDER_INVALID);
+    }
+    if (new Set(ctgIds).size !== ctgIds.length) {
+      throw new BusinessException(CtgResponse.CATEGORY_ORDER_INVALID);
+    }
+
+    const categoryById = new Map(
+      categories.map((category) => [category.ctgId, category]),
+    );
+    const reorderedCategories: CtgEntity[] = [];
+
+    for (const ctgId of ctgIds) {
+      const category = categoryById.get(ctgId);
+      if (!category) {
+        throw new BusinessException(CtgResponse.CATEGORY_ORDER_INVALID);
+      }
+      reorderedCategories.push(category);
+    }
+
+    for (let i = 0; i < reorderedCategories.length; i += 1) {
+      reorderedCategories[i].sortOrder = i;
+    }
+
+    try {
+      await repo.saveMany(reorderedCategories);
+      return reorderedCategories.map((category) =>
+        this.toCategoryResult(category),
+      );
+    } catch {
+      throw new BusinessException(CtgResponse.CATEGORY_ORDER_UPDATE_FAILED);
+    }
   }
 }
