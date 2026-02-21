@@ -8,6 +8,7 @@ import { BusinessException } from '../../common/exceptions/business.exception';
 import { AuthResponse } from '../../common/response/auth.response';
 import { QueryFailedError } from 'typeorm';
 import { UsersRepository } from '../users/repositories/users.repository';
+import ms, { StringValue } from 'ms';
 
 type EmailVerificationCodeEntry = {
   codeHash: string;
@@ -25,6 +26,19 @@ type LoginResult = {
   email: string;
   name: string;
   accessToken: string;
+  refreshToken: string;
+  refreshTokenMaxAgeMs: number;
+};
+
+type RefreshResult = {
+  accessToken: string;
+  refreshToken: string;
+  refreshTokenMaxAgeMs: number;
+};
+
+type TokenPayload = {
+  sub: string;
+  email: string;
 };
 
 type UserProfile = {
@@ -55,6 +69,8 @@ export class AuthService {
   private readonly DEFAULT_ARGON2_MEMORY_COST = 65536;
   private readonly DEFAULT_ARGON2_PARALLELISM = 1;
   private readonly DEFAULT_ARGON2_HASH_LENGTH = 32;
+  private readonly DEFAULT_REFRESH_TOKEN_EXPIRES_IN: StringValue = '7d';
+  private readonly DEFAULT_REFRESH_TOKEN_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
   private readonly emailCodeStore = new Map<
     string,
     EmailVerificationCodeEntry
@@ -67,6 +83,7 @@ export class AuthService {
     id: '00000000-0000-0000-0000-000000000001',
     name: '최정빈',
   };
+  private fallbackRefreshToken: string | null = null;
 
   private normalizeEmail(email: string): string {
     return email.trim().toLowerCase();
@@ -89,6 +106,78 @@ export class AuthService {
       throw new BusinessException(AuthResponse.AUTH_CONFIG_INVALID);
     }
     return secret;
+  }
+
+  private getRefreshTokenSecret(): string {
+    const secret = process.env.JWT_REFRESH_SECRET ?? process.env.JWT_SECRET;
+    if (!secret) {
+      throw new BusinessException(AuthResponse.AUTH_CONFIG_INVALID);
+    }
+    return secret;
+  }
+
+  private getRefreshTokenExpiresIn(): number | StringValue {
+    const expiresIn = process.env.JWT_REFRESH_EXPIRES_IN?.trim();
+    if (!expiresIn) {
+      return this.DEFAULT_REFRESH_TOKEN_EXPIRES_IN;
+    }
+
+    if (/^\d+$/.test(expiresIn)) {
+      return Number(expiresIn);
+    }
+
+    return expiresIn as StringValue;
+  }
+
+  private getRefreshTokenMaxAgeMs(expiresIn: number | StringValue): number {
+    if (typeof expiresIn === 'number') {
+      return expiresIn * 1000;
+    }
+
+    const parsed = ms(expiresIn);
+    if (typeof parsed === 'number' && parsed > 0) {
+      return parsed;
+    }
+
+    return this.DEFAULT_REFRESH_TOKEN_MAX_AGE_MS;
+  }
+
+  private issueTokenPair(payload: TokenPayload): RefreshResult {
+    const accessToken = this.jwtService.sign(payload);
+    const refreshExpiresIn = this.getRefreshTokenExpiresIn();
+    const refreshToken = this.jwtService.sign(payload, {
+      secret: this.getRefreshTokenSecret(),
+      expiresIn: refreshExpiresIn,
+    });
+
+    return {
+      accessToken,
+      refreshToken,
+      refreshTokenMaxAgeMs: this.getRefreshTokenMaxAgeMs(refreshExpiresIn),
+    };
+  }
+
+  private verifyRefreshToken(refreshToken: string): TokenPayload | null {
+    let payload: { sub?: string; email?: string };
+    try {
+      payload = this.jwtService.verify<{ sub?: string; email?: string }>(
+        refreshToken,
+        {
+          secret: this.getRefreshTokenSecret(),
+        },
+      );
+    } catch {
+      return null;
+    }
+
+    if (!payload.sub || typeof payload.sub !== 'string') {
+      return null;
+    }
+
+    return {
+      sub: payload.sub,
+      email: payload.email ?? '',
+    };
   }
 
   private parseArgon2Number(
@@ -268,15 +357,18 @@ export class AuthService {
         normalizedEmail === this.FALLBACK_USER.email &&
         password === this.FALLBACK_USER.password
       ) {
-        const payload = {
+        const payload: TokenPayload = {
           sub: this.FALLBACK_USER.id,
           email: this.FALLBACK_USER.email,
         };
-        const accessToken = this.jwtService.sign(payload);
+        const tokenPair = this.issueTokenPair(payload);
+        this.fallbackRefreshToken = tokenPair.refreshToken;
         return {
           name: this.FALLBACK_USER.name,
           email: this.FALLBACK_USER.email,
-          accessToken,
+          accessToken: tokenPair.accessToken,
+          refreshToken: tokenPair.refreshToken,
+          refreshTokenMaxAgeMs: tokenPair.refreshTokenMaxAgeMs,
         };
       }
       return null;
@@ -296,17 +388,95 @@ export class AuthService {
       return null;
     }
 
-    const payload = {
+    const payload: TokenPayload = {
       sub: user.usrId,
       email: user.usrEmail ?? '',
     };
-    const accessToken = this.jwtService.sign(payload);
+    const tokenPair = this.issueTokenPair(payload);
+    user.accessToken = tokenPair.accessToken;
+    user.refreshToken = tokenPair.refreshToken;
+    user.lastLoginAt = new Date();
+    user.failedLoginCnt = 0;
+    await this.usersRepository.save(user);
 
     return {
       name: user.usrName,
       email: user.usrEmail ?? '',
-      accessToken,
+      accessToken: tokenPair.accessToken,
+      refreshToken: tokenPair.refreshToken,
+      refreshTokenMaxAgeMs: tokenPair.refreshTokenMaxAgeMs,
     };
+  }
+
+  async refresh(refreshToken: string): Promise<RefreshResult | null> {
+    if (!refreshToken) {
+      return null;
+    }
+
+    const payload = this.verifyRefreshToken(refreshToken);
+    if (!payload) {
+      return null;
+    }
+
+    if (!this.usersRepository || !this.usersRepository.isReady()) {
+      if (
+        payload.sub !== this.FALLBACK_USER.id ||
+        this.fallbackRefreshToken !== refreshToken
+      ) {
+        return null;
+      }
+
+      const tokenPair = this.issueTokenPair({
+        sub: this.FALLBACK_USER.id,
+        email: this.FALLBACK_USER.email,
+      });
+      this.fallbackRefreshToken = tokenPair.refreshToken;
+      return tokenPair;
+    }
+
+    const user = await this.usersRepository.findById(payload.sub);
+    if (!user) {
+      return null;
+    }
+
+    if (!user.refreshToken || user.refreshToken !== refreshToken) {
+      return null;
+    }
+
+    const tokenPair = this.issueTokenPair({
+      sub: user.usrId,
+      email: user.usrEmail ?? '',
+    });
+    user.accessToken = tokenPair.accessToken;
+    user.refreshToken = tokenPair.refreshToken;
+    await this.usersRepository.save(user);
+
+    return tokenPair;
+  }
+
+  async logout(refreshToken: string | null): Promise<void> {
+    if (!this.usersRepository || !this.usersRepository.isReady()) {
+      this.fallbackRefreshToken = null;
+      return;
+    }
+
+    if (!refreshToken) {
+      return;
+    }
+
+    const payload = this.verifyRefreshToken(refreshToken);
+    if (!payload) {
+      return;
+    }
+
+    const user = await this.usersRepository.findById(payload.sub);
+    if (!user || user.refreshToken !== refreshToken) {
+      return;
+    }
+
+    user.accessToken = null;
+    user.refreshToken = null;
+    await this.usersRepository.save(user);
   }
 
   /** @description 사용자 정보 조회 메서드 */

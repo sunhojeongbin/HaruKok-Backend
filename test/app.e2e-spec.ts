@@ -29,6 +29,71 @@ describe('Auth (e2e)', () => {
       .expect(200);
   });
 
+  it('/auth/refresh (POST) success', async () => {
+    const loginResponse = await request(httpServer())
+      .post('/auth/login')
+      .send({ email: 'test@gmail.com', password: '1234' })
+      .expect(200);
+
+    const setCookieHeader = loginResponse.headers['set-cookie'] as
+      | string
+      | string[]
+      | undefined;
+    const setCookie = Array.isArray(setCookieHeader)
+      ? setCookieHeader
+      : setCookieHeader
+        ? [setCookieHeader]
+        : [];
+    expect(setCookie.length).toBeGreaterThan(0);
+
+    const refreshTokenCookie = setCookie?.find((cookie) =>
+      cookie.startsWith('refreshToken='),
+    );
+    expect(refreshTokenCookie).toBeDefined();
+
+    const refreshResponse = await request(httpServer())
+      .post('/auth/refresh')
+      .set('Cookie', refreshTokenCookie as string)
+      .expect(200);
+
+    expect(refreshResponse.body?.data?.accessToken).toBeDefined();
+  });
+
+  it('/auth/refresh (POST) fail when cookie missing', () => {
+    return request(httpServer()).post('/auth/refresh').expect(401);
+  });
+
+  it('/auth/logout (POST) success and invalidate refresh token', async () => {
+    const loginResponse = await request(httpServer())
+      .post('/auth/login')
+      .send({ email: 'test@gmail.com', password: '1234' })
+      .expect(200);
+
+    const setCookieHeader = loginResponse.headers['set-cookie'] as
+      | string
+      | string[]
+      | undefined;
+    const setCookie = Array.isArray(setCookieHeader)
+      ? setCookieHeader
+      : setCookieHeader
+        ? [setCookieHeader]
+        : [];
+    const refreshTokenCookie = setCookie.find((cookie) =>
+      cookie.startsWith('refreshToken='),
+    );
+    expect(refreshTokenCookie).toBeDefined();
+
+    await request(httpServer())
+      .post('/auth/logout')
+      .set('Cookie', refreshTokenCookie as string)
+      .expect(200);
+
+    await request(httpServer())
+      .post('/auth/refresh')
+      .set('Cookie', refreshTokenCookie as string)
+      .expect(401);
+  });
+
   it('/auth/login (POST) fail', () => {
     return request(httpServer())
       .post('/auth/login')

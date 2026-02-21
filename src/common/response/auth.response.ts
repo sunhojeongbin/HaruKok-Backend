@@ -93,6 +93,24 @@ export const AuthResponse = {
     message: '아이디 또는 비밀번호가 올바르지 않습니다.',
     errorCode: 'UNAUTHORIZED',
   },
+  REFRESH_TOKEN_REQUIRED: {
+    httpCode: 401,
+    message: '리프레시 토큰이 필요합니다.',
+    errorCode: 'REFRESH_TOKEN_REQUIRED',
+  },
+  REFRESH_TOKEN_INVALID: {
+    httpCode: 401,
+    message: '리프레시 토큰이 유효하지 않습니다.',
+    errorCode: 'REFRESH_TOKEN_INVALID',
+  },
+  TOKEN_REFRESH_SUCCESS: {
+    httpCode: 200,
+    message: '토큰 재발급에 성공했습니다.',
+  },
+  LOGOUT_SUCCESS: {
+    httpCode: 200,
+    message: '로그아웃에 성공했습니다.',
+  },
   USER_FOUND: {
     httpCode: 200,
     message: '사용자 정보 조회에 성공했습니다.',
