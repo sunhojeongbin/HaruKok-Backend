@@ -82,29 +82,25 @@ export class CtgService {
       throw new BusinessException(CtgResponse.CATEGORY_NAME_INVALID);
     }
 
-    const categories = await repo.findAllByUser(userId);
-    if (categories.length >= this.MAX_CATEGORY_COUNT) {
-      throw new BusinessException(CtgResponse.CATEGORY_LIMIT_EXCEEDED);
-    }
-
     const duplicated = await repo.findByUserAndName(userId, normalizedName);
     if (duplicated) {
       throw new BusinessException(CtgResponse.CATEGORY_NAME_DUPLICATED);
     }
 
-    const maxSortOrder = categories.reduce(
-      (max, category) => Math.max(max, category.sortOrder),
-      -1,
-    );
-
     try {
-      const category = await repo.createAndSave({
-        usrId: userId,
-        ctgName: normalizedName,
-        visibility: dto.visibility ?? VisibilityType.FRIENDS,
-        colorCode: dto.colorCode ?? '#000000',
-        sortOrder: maxSortOrder + 1,
-      });
+      const category = await repo.createAndSave(
+        {
+          usrId: userId,
+          ctgName: normalizedName,
+          visibility: dto.visibility ?? VisibilityType.FRIENDS,
+          colorCode: dto.colorCode ?? '#000000',
+        },
+        this.MAX_CATEGORY_COUNT,
+      );
+
+      if (!category) {
+        throw new BusinessException(CtgResponse.CATEGORY_LIMIT_EXCEEDED);
+      }
 
       return this.toCategoryResult(category);
     } catch (error) {

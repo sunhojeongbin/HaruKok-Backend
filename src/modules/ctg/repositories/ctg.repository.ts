@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CtgEntity } from '../entities/ctg.entity';
 import { VisibilityType } from '../enums/visibility-type.enum';
+import { UsrEntity } from '../../users/entities/usr.entity';
 
 /** @description 카테고리 생성에 필요한 저장 파라미터 */
 type CreateCategoryParams = {
@@ -12,6 +13,8 @@ type CreateCategoryParams = {
   colorCode: string;
   sortOrder: number;
 };
+
+type CreateCategoryWithLimitParams = Omit<CreateCategoryParams, 'sortOrder'>;
 
 /** @description 카테고리 리포지토리 래퍼 */
 @Injectable()
@@ -90,10 +93,51 @@ export class CtgRepository {
   }
 
   /** @description 카테고리 엔티티를 생성하고 저장 */
-  async createAndSave(params: CreateCategoryParams): Promise<CtgEntity> {
+  async createAndSave(params: CreateCategoryParams): Promise<CtgEntity>;
+  async createAndSave(
+    params: CreateCategoryWithLimitParams,
+    maxCategoryCount: number,
+  ): Promise<CtgEntity | null>;
+  async createAndSave(
+    params: CreateCategoryParams | CreateCategoryWithLimitParams,
+    maxCategoryCount?: number,
+  ): Promise<CtgEntity | null> {
     const repository = this.getRepository();
-    const category = repository.create(params);
-    return repository.save(category);
+
+    if (maxCategoryCount === undefined) {
+      const category = repository.create(params as CreateCategoryParams);
+      return repository.save(category);
+    }
+
+    return repository.manager.transaction(async (manager) => {
+      await manager
+        .getRepository(UsrEntity)
+        .createQueryBuilder('usr')
+        .where('usr.usr_id = :usrId', { usrId: params.usrId })
+        .setLock('pessimistic_write')
+        .getOne();
+
+      const categories = await manager.find(CtgEntity, {
+        where: { usrId: params.usrId, isDeleted: false },
+        order: { sortOrder: 'ASC', createdAt: 'ASC' },
+      });
+
+      if (categories.length >= maxCategoryCount) {
+        return null;
+      }
+
+      const maxSortOrder = categories.reduce(
+        (max, category) => Math.max(max, category.sortOrder),
+        -1,
+      );
+
+      const category = manager.create(CtgEntity, {
+        ...params,
+        sortOrder: maxSortOrder + 1,
+      });
+
+      return manager.save(CtgEntity, category);
+    });
   }
 
   /** @description 카테고리 엔티티 단건을 저장 */
