@@ -7,6 +7,9 @@ import {
   IsUUID,
 } from 'class-validator';
 
+/**
+ * @description 카테고리 순서 일괄 변경 요청 DTO
+ */
 export class ReorderCtgDto {
   @ApiProperty({
     description: '정렬된 카테고리 ID 배열(맨 앞이 0순위)',

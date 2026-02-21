@@ -1,5 +1,8 @@
 import { ResponseCode } from './response-code';
 
+/**
+ * @description 카테고리 도메인 응답/에러 코드 집합
+ */
 export const CtgResponse = {
   CATEGORY_REPOSITORY_NOT_READY: {
     httpCode: 503,

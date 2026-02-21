@@ -9,6 +9,9 @@ import {
 } from 'class-validator';
 import { VisibilityType } from '../enums/visibility-type.enum';
 
+/**
+ * @description 카테고리 수정 요청 DTO
+ */
 export class UpdateCtgDto {
   @ApiPropertyOptional({
     description: '카테고리 이름',

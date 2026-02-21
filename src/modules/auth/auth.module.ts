@@ -10,6 +10,9 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { MailModule } from '../mail/mail.module';
 import { UsersModule } from '../users/users.module';
 
+/**
+ * @description 인증 도메인 모듈
+ */
 @Module({
   imports: [
     ConfigModule,

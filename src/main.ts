@@ -31,7 +31,16 @@ async function bootstrap() {
   /** @description Swagger 설정 */
   const config = new DocumentBuilder()
     .setTitle('HaruKok API')
-    .setDescription('API documentation')
+    .setDescription(
+      [
+        'HaruKok 백엔드 API 문서입니다.',
+        '',
+        '인증 사용 순서:',
+        '1) `POST /auth/login` 호출',
+        '2) 응답의 `accessToken`으로 상단 Authorize(Bearer) 설정',
+        '3) 만료 시 `POST /auth/refresh` 호출 (HttpOnly 쿠키 기반)',
+      ].join('\n'),
+    )
     .setVersion('1.0')
     .addBearerAuth()
     .build();
