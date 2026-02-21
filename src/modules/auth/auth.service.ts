@@ -78,7 +78,7 @@ export class AuthService {
   private readonly DEFAULT_ARGON2_HASH_LENGTH = 32; // Argon2 해시 길이 기본값(바이트)
   private readonly PASSWORD_ALGORITHM_ARGON2ID = 'argon2id'; // 패스워드 해시 알고리즘 식별자
   private readonly DEFAULT_REFRESH_TOKEN_EXPIRES_IN: StringValue = '30d'; // 리프레시 토큰 기본 만료 시간
-  private readonly DEFAULT_REFRESH_TOKEN_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 리프레시 토큰 기본 maxAge(밀리초)
+  private readonly DEFAULT_REFRESH_TOKEN_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 리프레시 토큰 기본 maxAge(밀리초)
   private readonly emailCodeStore = new Map<
     string,
     EmailVerificationCodeEntry
@@ -142,7 +142,12 @@ export class AuthService {
       return Number(expiresIn);
     }
 
-    return expiresIn as StringValue;
+    const parsed = ms(expiresIn as StringValue);
+    if (typeof parsed === 'number' && parsed > 0) {
+      return expiresIn as StringValue;
+    }
+
+    return this.DEFAULT_REFRESH_TOKEN_EXPIRES_IN;
   }
 
   /** @description 리프레시 토큰 만료값을 쿠키 `maxAge(ms)`로 변환하는 메소드 */
