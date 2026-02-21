@@ -14,7 +14,7 @@ import { ResponseCode } from './response-code';
 export const AuthResponse = {
   EMAIL_CODE_SENT: {
     httpCode: 200,
-    message: '이메일 인증 코드가 발송되었습니다.',
+    message: '이메일 인증 번호가 발송되었습니다.',
   },
   EMAIL_SEND_FAILED: {
     httpCode: 500,
@@ -23,22 +23,22 @@ export const AuthResponse = {
   },
   EMAIL_CODE_FORMAT_INVALID: {
     httpCode: 400,
-    message: '인증 코드 형식이 올바르지 않습니다.',
+    message: '인증 번호 형식이 올바르지 않습니다.',
     errorCode: 'EMAIL_CODE_FORMAT_INVALID',
   },
   EMAIL_CODE_EXPIRED_OR_NOT_FOUND: {
     httpCode: 400,
-    message: '인증 코드가 없거나 만료되었습니다.',
+    message: '인증 번호가 없거나 만료되었습니다.',
     errorCode: 'EMAIL_CODE_EXPIRED_OR_NOT_FOUND',
   },
   EMAIL_CODE_ATTEMPTS_EXCEEDED: {
     httpCode: 429,
-    message: '인증 코드 검증 시도 횟수를 초과했습니다.',
+    message: '인증 번호 검증 시도 횟수를 초과했습니다.',
     errorCode: 'EMAIL_CODE_ATTEMPTS_EXCEEDED',
   },
   EMAIL_CODE_INVALID: {
     httpCode: 400,
-    message: '인증 코드가 올바르지 않습니다.',
+    message: '인증 번호가 올바르지 않습니다.',
     errorCode: 'EMAIL_CODE_INVALID',
   },
   EMAIL_CODE_VERIFIED: {

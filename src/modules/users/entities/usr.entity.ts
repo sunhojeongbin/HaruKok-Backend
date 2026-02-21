@@ -33,6 +33,15 @@ export class UsrEntity {
   usrName: string;
 
   @Column({
+    name: 'password',
+    type: 'varchar',
+    length: 254,
+    nullable: true,
+    comment: '비밀번호 해시값',
+  })
+  password: string | null;
+
+  @Column({
     name: 'password_hash',
     type: 'varchar',
     length: 255,

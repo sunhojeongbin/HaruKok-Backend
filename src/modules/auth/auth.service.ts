@@ -10,18 +10,21 @@ import { QueryFailedError } from 'typeorm';
 import { UsersRepository } from '../users/repositories/users.repository';
 import ms, { StringValue } from 'ms';
 
+/** @description 이메일 인증 코드 저장 */
 type EmailVerificationCodeEntry = {
   codeHash: string;
   expiresAt: number;
   attempts: number;
 };
 
+/** @description 회원가입 토큰 페이로드 */
 type SignupPayload = {
   sub: string;
   verified: boolean;
   purpose: string;
 };
 
+/** @description 로그인 처리 결과 */
 type LoginResult = {
   email: string;
   name: string;
@@ -30,29 +33,33 @@ type LoginResult = {
   refreshTokenMaxAgeMs: number;
 };
 
+/** @description 토큰 재발급 처리 결과 */
 type RefreshResult = {
   accessToken: string;
   refreshToken: string;
   refreshTokenMaxAgeMs: number;
 };
 
+/** @description JWT 서명용 사용자 식별 페이로드 */
 type TokenPayload = {
   sub: string;
   email: string;
 };
 
-type UserProfile = {
+/** @description 사용자 조회 응답 */
+type UserInfo = {
   id: string;
   name: string;
   email: string;
 };
 
+/** @description 6자리 숫자 인증 코드를 생성 메소드 */
 function random6Digits(): string {
-  // 000000~999999
   const n = crypto.randomInt(0, 1_000_000);
   return n.toString().padStart(6, '0');
 }
 
+/** @description 인증(이메일 인증, 회원가입, 로그인, 토큰 재발급) 비즈니스 로직을 처리 서비스 레이어 */
 @Injectable()
 export class AuthService {
   constructor(
@@ -62,37 +69,41 @@ export class AuthService {
     private readonly usersRepository?: UsersRepository,
   ) {}
 
-  private readonly CODE_TTL_SEC = 10 * 60;
-  private readonly SIGNUP_TTL_SEC = 30 * 60;
-  private readonly MAX_VERIFY_ATTEMPTS = 5;
-  private readonly DEFAULT_ARGON2_TIME_COST = 3;
-  private readonly DEFAULT_ARGON2_MEMORY_COST = 65536;
-  private readonly DEFAULT_ARGON2_PARALLELISM = 1;
-  private readonly DEFAULT_ARGON2_HASH_LENGTH = 32;
-  private readonly DEFAULT_REFRESH_TOKEN_EXPIRES_IN: StringValue = '7d';
-  private readonly DEFAULT_REFRESH_TOKEN_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+  private readonly CODE_TTL_SEC = 10 * 60; // 이메일 인증 코드 유효 시간(초)
+  private readonly SIGNUP_TTL_SEC = 30 * 60; // 회원가입 토큰 유효 시간(초)
+  private readonly MAX_VERIFY_ATTEMPTS = 5; // 이메일 인증 코드 검증 최대 시도 횟수
+  private readonly DEFAULT_ARGON2_TIME_COST = 3; // Argon2 시간 비용 기본값(초)
+  private readonly DEFAULT_ARGON2_MEMORY_COST = 65536; // Argon2 메모리 비용 기본값(KiB)
+  private readonly DEFAULT_ARGON2_PARALLELISM = 1; // Argon2 병렬성 기본값
+  private readonly DEFAULT_ARGON2_HASH_LENGTH = 32; // Argon2 해시 길이 기본값(바이트)
+  private readonly PASSWORD_ALGORITHM_ARGON2ID = 'argon2id'; // 패스워드 해시 알고리즘 식별자
+  private readonly DEFAULT_REFRESH_TOKEN_EXPIRES_IN: StringValue = '30d'; // 리프레시 토큰 기본 만료 시간
+  private readonly DEFAULT_REFRESH_TOKEN_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 리프레시 토큰 기본 maxAge(밀리초)
   private readonly emailCodeStore = new Map<
     string,
     EmailVerificationCodeEntry
   >();
 
-  // DB가 비활성화된 테스트 환경에서 로그인 e2e를 유지하기 위한 fallback
+  /** @description DB가 비활성화된 테스트 환경에서 로그인 e2e를 유지하기 위한 fallback 사용자 */
   private readonly FALLBACK_USER = {
     email: 'test@gmail.com',
     password: '1234',
     id: '00000000-0000-0000-0000-000000000001',
-    name: '최정빈',
+    name: '홍길동',
   };
   private fallbackRefreshToken: string | null = null;
 
+  /** @description 이메일을 소문자/공백 제거 형태로 정규화 메소드 */
   private normalizeEmail(email: string): string {
     return email.trim().toLowerCase();
   }
 
+  /** @description 이름 문자열의 앞뒤 공백을 제거하는 메소드 */
   private normalizeName(name: string): string {
     return name.trim();
   }
 
+  /** @description 사용자 리포지토리 준비 상태를 확인하고 반환하는 메소드 */
   private getUsersRepository(): UsersRepository {
     if (!this.usersRepository || !this.usersRepository.isReady()) {
       throw new BusinessException(AuthResponse.USER_REPOSITORY_NOT_READY);
@@ -100,6 +111,7 @@ export class AuthService {
     return this.usersRepository;
   }
 
+  /** @description 이메일 인증 코드 해시 생성에 사용할 시크릿을 조회하는 메소드 */
   private getEmailCodeSecret(): string {
     const secret = process.env.EMAIL_CODE_SECRET ?? process.env.JWT_SECRET;
     if (!secret) {
@@ -108,6 +120,7 @@ export class AuthService {
     return secret;
   }
 
+  /** @description 리프레시 토큰 서명 시크릿을 조회하는 메소드 */
   private getRefreshTokenSecret(): string {
     const secret = process.env.JWT_REFRESH_SECRET ?? process.env.JWT_SECRET;
     if (!secret) {
@@ -116,6 +129,7 @@ export class AuthService {
     return secret;
   }
 
+  /** @description 환경변수에서 리프레시 토큰 만료값을 읽어 파싱 가능한 형태로 반환하는 메소드 */
   private getRefreshTokenExpiresIn(): number | StringValue {
     const expiresIn = process.env.JWT_REFRESH_EXPIRES_IN?.trim();
     if (!expiresIn) {
@@ -129,6 +143,7 @@ export class AuthService {
     return expiresIn as StringValue;
   }
 
+  /** @description 리프레시 토큰 만료값을 쿠키 `maxAge(ms)`로 변환하는 메소드 */
   private getRefreshTokenMaxAgeMs(expiresIn: number | StringValue): number {
     if (typeof expiresIn === 'number') {
       return expiresIn * 1000;
@@ -142,6 +157,11 @@ export class AuthService {
     return this.DEFAULT_REFRESH_TOKEN_MAX_AGE_MS;
   }
 
+  /**
+   * @description 액세스 토큰 / 리프레시 토큰 쌍을 생성하는 메소드
+   * @param payload JWT 페이로드(사용자 식별 정보)
+   * @returns 액세스 토큰, 리프레시 토큰, 리프레시 토큰 maxAge(ms) 정보를 포함하는 객체
+   */
   private issueTokenPair(payload: TokenPayload): RefreshResult {
     const accessToken = this.jwtService.sign(payload);
     const refreshExpiresIn = this.getRefreshTokenExpiresIn();
@@ -157,6 +177,11 @@ export class AuthService {
     };
   }
 
+  /**
+   * @description 리프레시 토큰을 검증하고 페이로드를 반환한다.
+   * @param refreshToken 검증할 리프레시 토큰
+   * @returns 유효한 토큰이면 페이로드, 그렇지 않으면 null
+   */
   private verifyRefreshToken(refreshToken: string): TokenPayload | null {
     let payload: { sub?: string; email?: string };
     try {
@@ -180,6 +205,14 @@ export class AuthService {
     };
   }
 
+  /**
+   * @description Argon2 옵션 숫자 값을 범위 검증 후 파싱하는 메소드
+   * @param value 파싱할 환경변수 값
+   * @param fallback 기본값
+   * @param min 허용되는 최소값
+   * @param max 허용되는 최대값
+   * @returns 유효한 숫자 값 또는 기본값
+   */
   private parseArgon2Number(
     value: string | undefined,
     fallback: number,
@@ -193,6 +226,7 @@ export class AuthService {
     return fallback;
   }
 
+  /** @description 환경변수를 기반으로 Argon2 해시 옵션을 구성하는 메소드 */
   private getArgon2Options(): argon2.Options & { raw?: false } {
     return {
       type: argon2.argon2id,
@@ -223,6 +257,11 @@ export class AuthService {
     };
   }
 
+  /**
+   * @description 이메일 인증 코드를 생성하고 메일로 발송한 뒤, 해시 형태로 저장하는 메소드
+   * @param email 인증 코드를 발송할 이메일 주소
+   * @returns 발송 성공 여부
+   */
   async sendEmailCode(email: string) {
     const normalizedEmail = this.normalizeEmail(email);
     const code = random6Digits();
@@ -242,6 +281,12 @@ export class AuthService {
     return { ok: true };
   }
 
+  /**
+   * @description 이메일 인증 코드를 검증하고 회원가입 전용 토큰을 발급하는 메소드
+   * @param email 인증 대상 이메일 주소
+   * @param code 검증할 6자리 인증 코드
+   * @returns 검증 성공 시 회원가입 토큰을 포함한 객체, 실패 시 예외 발생
+   */
   verifyEmailCode(email: string, code: string) {
     if (!code || code.length !== 6) {
       throw new BusinessException(AuthResponse.EMAIL_CODE_FORMAT_INVALID);
@@ -287,6 +332,11 @@ export class AuthService {
     return { ok: true, signupToken };
   }
 
+  /**
+   * @description 회원가입 토큰의 유효성을 검증하고 이메일(subject)을 반환하는 메소드
+   * @param signupToken 검증할 회원가입 토큰
+   * @returns 유효한 토큰이면 이메일, 그렇지 않으면 예외 발생
+   */
   assertSignupToken(signupToken: string): string {
     let payload: SignupPayload;
     try {
@@ -302,12 +352,20 @@ export class AuthService {
     return this.normalizeEmail(payload.sub);
   }
 
+  /**
+   * @description 회원가입을 처리하고 사용자 기본 정보를 반환하는 메소드
+   * @param email 회원가입할 이메일 주소
+   * @param password 회원가입할 비밀번호
+   * @param name 회원가입할 사용자 이름
+   * @param signupToken 회원가입 토큰
+   * @returns 생성된 사용자 정보(사용자 ID, 이메일, 이름)를 포함하는 객체
+   */
   async signup(
     email: string,
     password: string,
     name: string,
     signupToken: string,
-  ): Promise<UserProfile> {
+  ): Promise<UserInfo> {
     const normalizedEmail = this.normalizeEmail(email);
     const normalizedName = this.normalizeName(name);
     const emailFromToken = this.assertSignupToken(signupToken);
@@ -325,7 +383,8 @@ export class AuthService {
     const user = {
       usrEmail: normalizedEmail,
       usrName: normalizedName,
-      passwordHash: hashedPassword,
+      password: hashedPassword,
+      passwordHash: this.PASSWORD_ALGORITHM_ARGON2ID,
     };
 
     try {
@@ -348,7 +407,12 @@ export class AuthService {
     }
   }
 
-  /** @description 로그인 메서드 */
+  /**
+   * @description 로그인 정보를 검증하고 토큰을 발급하는 메소드
+   * @param email 로그인할 이메일 주소
+   * @param password 로그인할 비밀번호
+   * @returns 로그인 성공 시 액세스 토큰 정보를 포함한 객체, 실패 시 null
+   */
   async login(email: string, password: string): Promise<LoginResult | null> {
     const normalizedEmail = this.normalizeEmail(email);
 
@@ -379,12 +443,22 @@ export class AuthService {
       return null;
     }
 
-    if (!user.passwordHash) {
-      return null;
-    }
+    if (user.password && user.passwordHash) {
+      const passwordAlgorithm = user.passwordHash.toLowerCase();
+      if (passwordAlgorithm !== this.PASSWORD_ALGORITHM_ARGON2ID) {
+        return null;
+      }
 
-    const passwordMatched = await argon2.verify(user.passwordHash, password);
-    if (!passwordMatched) {
+      const passwordMatched = await argon2.verify(user.password, password);
+      if (!passwordMatched) {
+        return null;
+      }
+    } else if (user.passwordHash && user.passwordHash.startsWith('$argon2')) {
+      const passwordMatched = await argon2.verify(user.passwordHash, password);
+      if (!passwordMatched) {
+        return null;
+      }
+    } else {
       return null;
     }
 
@@ -408,6 +482,11 @@ export class AuthService {
     };
   }
 
+  /**
+   * @description 리프레시 토큰을 검증해 새로운 토큰 쌍을 발급 하는 메소드
+   * @param refreshToken 재발급에 사용할 리프레시 토큰
+   * @returns 유효한 리프레시 토큰이면 새로운 액세스 토큰과 리프레시 토큰 정보를 포함하는 객체, 그렇지 않으면 null
+   */
   async refresh(refreshToken: string): Promise<RefreshResult | null> {
     if (!refreshToken) {
       return null;
@@ -454,6 +533,11 @@ export class AuthService {
     return tokenPair;
   }
 
+  /**
+   * @description 리프레시 토큰을 무효화하여 로그아웃 처리한다.
+   * @param refreshToken 로그아웃 처리할 리프레시 토큰
+   * @return 로그아웃 처리 결과(성공 여부)
+   */
   async logout(refreshToken: string | null): Promise<void> {
     if (!this.usersRepository || !this.usersRepository.isReady()) {
       this.fallbackRefreshToken = null;
@@ -479,8 +563,12 @@ export class AuthService {
     await this.usersRepository.save(user);
   }
 
-  /** @description 사용자 정보 조회 메서드 */
-  async getUserById(userId: string): Promise<UserProfile | null> {
+  /**
+   * @description 사용자 ID로 사용자 정보를 조회하는 메소드
+   * @param userId 조회할 사용자 ID
+   * @returns 사용자 정보 또는 null
+   */
+  async getUserById(userId: string): Promise<UserInfo | null> {
     if (!this.usersRepository || !this.usersRepository.isReady()) {
       if (userId === this.FALLBACK_USER.id) {
         return {

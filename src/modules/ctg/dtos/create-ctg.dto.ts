@@ -9,6 +9,9 @@ import {
 } from 'class-validator';
 import { VisibilityType } from '../enums/visibility-type.enum';
 
+/**
+ * @description 카테고리 생성 요청 DTO
+ */
 export class CreateCtgDto {
   @ApiProperty({
     description: '카테고리 이름',

@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { CtgEntity } from '../entities/ctg.entity';
 import { VisibilityType } from '../enums/visibility-type.enum';
 
+/** @description 카테고리 생성에 필요한 저장 파라미터 */
 type CreateCategoryParams = {
   usrId: string;
   ctgName: string;
@@ -12,6 +13,7 @@ type CreateCategoryParams = {
   sortOrder: number;
 };
 
+/** @description 카테고리 리포지토리 래퍼 */
 @Injectable()
 export class CtgRepository {
   constructor(
@@ -20,10 +22,12 @@ export class CtgRepository {
     private readonly repository?: Repository<CtgEntity>,
   ) {}
 
+  /** @description TypeORM Repository 의존성 주입 여부 확인 */
   isReady(): boolean {
     return Boolean(this.repository);
   }
 
+  /** @description 내부 TypeORM Repository를 반환 */
   private getRepository(): Repository<CtgEntity> {
     if (!this.repository) {
       throw new Error('CtgRepository is not initialized');
@@ -31,6 +35,7 @@ export class CtgRepository {
     return this.repository;
   }
 
+  /** @description 사용자/카테고리명으로 활성 카테고리를 조회 */
   async findByUserAndName(
     usrId: string,
     ctgName: string,
@@ -53,6 +58,12 @@ export class CtgRepository {
     return query.getOne();
   }
 
+  /**
+   * @description 카테고리 ID와 사용자 ID로 활성 카테고리 단건을 조회
+   * @param ctgId 조회할 카테고리 ID
+   * @param usrId 조회할 사용자 ID
+   * @returns 활성 카테고리 엔티티 또는 null
+   */
   async findByIdAndUser(
     ctgId: string,
     usrId: string,
@@ -66,6 +77,7 @@ export class CtgRepository {
     });
   }
 
+  /** @description 사용자 활성 카테고리 목록을 정렬 순서 기준으로 조회 */
   async findAllByUser(usrId: string): Promise<CtgEntity[]> {
     if (!this.repository) {
       return [];
@@ -77,16 +89,19 @@ export class CtgRepository {
     });
   }
 
+  /** @description 카테고리 엔티티를 생성하고 저장 */
   async createAndSave(params: CreateCategoryParams): Promise<CtgEntity> {
     const repository = this.getRepository();
     const category = repository.create(params);
     return repository.save(category);
   }
 
+  /** @description 카테고리 엔티티 단건을 저장 */
   async save(category: CtgEntity): Promise<CtgEntity> {
     return this.getRepository().save(category);
   }
 
+  /** @description 카테고리 엔티티 배열을 일괄 저장 */
   async saveMany(categories: CtgEntity[]): Promise<CtgEntity[]> {
     return this.getRepository().save(categories);
   }

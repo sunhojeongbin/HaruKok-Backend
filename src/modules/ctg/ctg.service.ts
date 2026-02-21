@@ -8,6 +8,7 @@ import { CtgEntity } from './entities/ctg.entity';
 import { VisibilityType } from './enums/visibility-type.enum';
 import { CtgRepository } from './repositories/ctg.repository';
 
+/** @description 카테고리 응답 데이터 형식 */
 type CategoryResult = {
   ctgId: string;
   usrId: string;
@@ -21,6 +22,7 @@ type CategoryResult = {
   updatedAt: Date;
 };
 
+/** @description 카테고리 비즈니스 로직을 처리하는 서비스 */
 @Injectable()
 export class CtgService {
   constructor(
@@ -28,8 +30,9 @@ export class CtgService {
     private readonly ctgRepository?: CtgRepository,
   ) {}
 
-  private readonly MAX_CATEGORY_COUNT = 10;
+  private readonly MAX_CATEGORY_COUNT = 10; // 사용자당 최대 카테고리 수 제한
 
+  /** @description 카테고리 리포지토리 준비 상태를 확인하고 반환하는 메소드 */
   private getCtgRepository(): CtgRepository {
     if (!this.ctgRepository || !this.ctgRepository.isReady()) {
       throw new BusinessException(CtgResponse.CATEGORY_REPOSITORY_NOT_READY);
@@ -37,10 +40,20 @@ export class CtgService {
     return this.ctgRepository;
   }
 
+  /**
+   * @description 카테고리 이름의 앞뒤 공백을 제거 메소드
+   * @param ctgName 정규화할 카테고리 이름
+   * @returns 앞뒤 공백이 제거된 카테고리 이름
+   */
   private normalizeCategoryName(ctgName: string): string {
     return ctgName.trim();
   }
 
+  /**
+   * @description 엔티티를 API 응답 객체로 변환하는 메소드
+   * @param category 변환할 카테고리 엔티티
+   * @returns API 응답 형식으로 변환된 카테고리 정보
+   */
   private toCategoryResult(category: CtgEntity): CategoryResult {
     return {
       ctgId: category.ctgId,
@@ -56,6 +69,12 @@ export class CtgService {
     };
   }
 
+  /**
+   * @description 카테고리를 생성하는 메소드
+   * @param userId 사용자 ID
+   * @param dto 생성할 카테고리 정보
+   * @returns 생성된 카테고리 정보
+   */
   async create(userId: string, dto: CreateCtgDto): Promise<CategoryResult> {
     const repo = this.getCtgRepository();
     const normalizedName = this.normalizeCategoryName(dto.ctgName);
@@ -101,6 +120,13 @@ export class CtgService {
     }
   }
 
+  /**
+   * @description 카테고리 기본 정보를 수정하는 메소드
+   * @param userId 사용자 ID
+   * @param ctgId 수정할 카테고리 ID
+   * @param dto 수정할 카테고리 정보
+   * @returns 수정된 카테고리 정보
+   */
   async update(
     userId: string,
     ctgId: string,
@@ -161,6 +187,12 @@ export class CtgService {
     }
   }
 
+  /**
+   * @description 카테고리를 소프트 삭제하고 남은 카테고리 순서를 재정렬하는 메소드
+   * @param userId 사용자 ID
+   * @param ctgId 삭제할 카테고리 ID
+   * @returns 삭제된 카테고리 ID
+   */
   async delete(userId: string, ctgId: string): Promise<{ ctgId: string }> {
     const repo = this.getCtgRepository();
     const category = await repo.findByIdAndUser(ctgId, userId);
@@ -177,13 +209,21 @@ export class CtgService {
       for (let i = 0; i < restCategories.length; i += 1) {
         restCategories[i].sortOrder = i;
       }
-      await repo.saveMany(restCategories);
+      await Promise.all(
+        restCategories.map((restCategory) => repo.save(restCategory)),
+      );
       return { ctgId };
     } catch {
       throw new BusinessException(CtgResponse.CATEGORY_DELETE_FAILED);
     }
   }
 
+  /**
+   * @description 카테고리 단건 정보를 조회하는 메소드
+   * @param userId 사용자 ID
+   * @param ctgId 조회할 카테고리 ID
+   * @returns 조회된 카테고리 정보
+   */
   async getById(userId: string, ctgId: string): Promise<CategoryResult> {
     const repo = this.getCtgRepository();
     const category = await repo.findByIdAndUser(ctgId, userId);
@@ -193,12 +233,23 @@ export class CtgService {
     return this.toCategoryResult(category);
   }
 
+  /**
+   * @description 사용자 카테고리 목록을 정렬 순서 기준으로 조회하는 메소드
+   * @param userId 사용자 ID
+   * @returns 조회된 카테고리 목록
+   */
   async getList(userId: string): Promise<CategoryResult[]> {
     const repo = this.getCtgRepository();
     const categories = await repo.findAllByUser(userId);
     return categories.map((category) => this.toCategoryResult(category));
   }
 
+  /**
+   * @description 전달받은 카테고리 ID 배열 순서대로 정렬 순서를 일괄 재배치하는 메소드
+   * @param userId 사용자 ID
+   * @param ctgIds 정렬 순서대로 재배치할 카테고리 ID 배열
+   * @returns 재배치된 카테고리 목록
+   */
   async reorder(userId: string, ctgIds: string[]): Promise<CategoryResult[]> {
     const repo = this.getCtgRepository();
     const categories = await repo.findAllByUser(userId);
@@ -227,7 +278,11 @@ export class CtgService {
     }
 
     try {
-      await repo.saveMany(reorderedCategories);
+      await Promise.all(
+        reorderedCategories.map((reorderedCategory) =>
+          repo.save(reorderedCategory),
+        ),
+      );
       return reorderedCategories.map((category) =>
         this.toCategoryResult(category),
       );
