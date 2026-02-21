@@ -49,4 +49,12 @@ export class UsersRepository {
     const user = this.repository.create(params);
     return this.repository.save(user);
   }
+
+  async save(user: UsrEntity): Promise<UsrEntity> {
+    if (!this.repository) {
+      throw new Error('UsersRepository is not initialized');
+    }
+
+    return this.repository.save(user);
+  }
 }

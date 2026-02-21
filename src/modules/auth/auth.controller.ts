@@ -7,7 +7,9 @@ import {
   HttpStatus,
   UnauthorizedException,
   UseGuards,
-  Request,
+  Request as NestRequest,
+  Res,
+  Req,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -25,6 +27,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { SendEmailCodeDto } from './dtos/send-email-code.dto';
 import { VerifyEmailCodeDto } from './dtos/verify-email-code.dto';
 import { SignupDto } from './dtos/signup.dto';
+import { Request, Response } from 'express';
 
 export class LoginResponseDto {
   email: string;
@@ -32,10 +35,55 @@ export class LoginResponseDto {
   accessToken: string;
 }
 
+export class RefreshResponseDto {
+  accessToken: string;
+}
+
+export class LogoutResponseDto {
+  ok: boolean;
+}
+
 @ApiTags('인증')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  private buildRefreshTokenCookieOptions(maxAge?: number) {
+    return {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax' as const,
+      path: '/',
+      ...(maxAge ? { maxAge } : {}),
+    };
+  }
+
+  private getRefreshTokenFromRequest(req: Request): string | null {
+    const cookies = (req as unknown as { cookies?: unknown }).cookies;
+    if (cookies && typeof cookies === 'object' && !Array.isArray(cookies)) {
+      const cookieFromParser = (cookies as Record<string, unknown>)
+        .refreshToken;
+      if (typeof cookieFromParser === 'string' && cookieFromParser.length > 0) {
+        return cookieFromParser;
+      }
+    }
+
+    const cookieHeader = req.headers.cookie;
+    if (!cookieHeader) {
+      return null;
+    }
+
+    const refreshCookie = cookieHeader
+      .split(';')
+      .map((value) => value.trim())
+      .find((value) => value.startsWith('refreshToken='));
+
+    if (!refreshCookie) {
+      return null;
+    }
+
+    return decodeURIComponent(refreshCookie.substring('refreshToken='.length));
+  }
 
   @Post('email/send')
   @ApiOperation({ summary: '이메일 인증 코드 전송' })
@@ -175,12 +223,21 @@ export class AuthController {
       },
     },
   })
-  async login(@Body() dto: LoginDto) {
+  async login(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const result = await this.authService.login(dto.email, dto.password);
 
     if (!result) {
       throw new BusinessException(AuthResponse.LOGIN_FAIL);
     }
+
+    res.cookie(
+      'refreshToken',
+      result.refreshToken,
+      this.buildRefreshTokenCookieOptions(result.refreshTokenMaxAgeMs),
+    );
 
     return ApiResponseDto.success<LoginResponseDto>(
       {
@@ -189,6 +246,94 @@ export class AuthController {
         accessToken: result.accessToken,
       },
       '로그인 성공',
+    );
+  }
+
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '액세스 토큰 재발급' })
+  @ApiResponse({
+    status: 200,
+    description: '토큰 재발급 성공',
+    schema: {
+      example: {
+        httpCode: 200,
+        message: '토큰 재발급에 성공했습니다.',
+        success: true,
+        data: {
+          accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: '리프레시 토큰 인증 실패',
+    schema: {
+      example: {
+        httpCode: 401,
+        message: '리프레시 토큰이 유효하지 않습니다.',
+        success: false,
+        errorCode: 'REFRESH_TOKEN_INVALID',
+      },
+    },
+  })
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const refreshToken = this.getRefreshTokenFromRequest(req);
+    if (!refreshToken) {
+      throw new BusinessException(AuthResponse.REFRESH_TOKEN_REQUIRED);
+    }
+
+    const result = await this.authService.refresh(refreshToken);
+    if (!result) {
+      res.clearCookie('refreshToken', this.buildRefreshTokenCookieOptions());
+      throw new BusinessException(AuthResponse.REFRESH_TOKEN_INVALID);
+    }
+
+    res.cookie(
+      'refreshToken',
+      result.refreshToken,
+      this.buildRefreshTokenCookieOptions(result.refreshTokenMaxAgeMs),
+    );
+
+    return ApiResponseDto.success<RefreshResponseDto>(
+      {
+        accessToken: result.accessToken,
+      },
+      AuthResponse.TOKEN_REFRESH_SUCCESS.message,
+      AuthResponse.TOKEN_REFRESH_SUCCESS.httpCode,
+    );
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '로그아웃' })
+  @ApiResponse({
+    status: 200,
+    description: '로그아웃 성공',
+    schema: {
+      example: {
+        httpCode: 200,
+        message: '로그아웃에 성공했습니다.',
+        success: true,
+        data: {
+          ok: true,
+        },
+      },
+    },
+  })
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const refreshToken = this.getRefreshTokenFromRequest(req);
+    await this.authService.logout(refreshToken);
+    res.clearCookie('refreshToken', this.buildRefreshTokenCookieOptions());
+
+    return ApiResponseDto.success<LogoutResponseDto>(
+      { ok: true },
+      AuthResponse.LOGOUT_SUCCESS.message,
+      AuthResponse.LOGOUT_SUCCESS.httpCode,
     );
   }
 
@@ -224,7 +369,7 @@ export class AuthController {
       },
     },
   })
-  async getMe(@Request() req: { user?: { userId?: string } }) {
+  async getMe(@NestRequest() req: { user?: { userId?: string } }) {
     const userId = req.user?.userId;
     if (!userId) {
       throw new UnauthorizedException('인증에 실패했습니다.');

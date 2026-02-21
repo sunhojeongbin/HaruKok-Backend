@@ -48,7 +48,10 @@ async function bootstrap() {
         text?: string;
       }) => {
         try {
-          if (!response.url?.includes('/auth/login')) {
+          const isAuthTokenResponse =
+            response.url?.includes('/auth/login') ||
+            response.url?.includes('/auth/refresh');
+          if (!isAuthTokenResponse) {
             return response;
           }
 

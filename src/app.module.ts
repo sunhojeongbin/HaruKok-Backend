@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './modules/auth/auth.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { CtgModule } from './modules/ctg/ctg.module';
 
 const databaseImports =
   process.env.SKIP_DB === 'true'
@@ -36,6 +37,7 @@ const databaseImports =
       envFilePath: [`.env.${process.env.NODE_ENV || 'development'}`, '.env'],
     }),
     AuthModule,
+    CtgModule,
     ...databaseImports,
   ],
   controllers: [],
