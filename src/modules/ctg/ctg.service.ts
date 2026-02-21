@@ -104,6 +104,9 @@ export class CtgService {
 
       return this.toCategoryResult(category);
     } catch (error) {
+      if (error instanceof BusinessException) {
+        throw error;
+      }
       if (error instanceof QueryFailedError) {
         const driverError = (
           error as QueryFailedError & { driverError?: { code?: string } }
