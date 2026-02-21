@@ -26,6 +26,11 @@ export const CtgResponse = {
     message: '카테고리를 찾을 수 없습니다.',
     errorCode: 'CATEGORY_NOT_FOUND',
   },
+  CATEGORY_ORDER_INVALID: {
+    httpCode: 400,
+    message: '유효하지 않은 카테고리 정렬 순서입니다.',
+    errorCode: 'CATEGORY_ORDER_INVALID',
+  },
   CATEGORY_CREATE_SUCCESS: {
     httpCode: 201,
     message: '카테고리가 생성되었습니다.',
@@ -37,6 +42,10 @@ export const CtgResponse = {
   CATEGORY_DELETE_SUCCESS: {
     httpCode: 200,
     message: '카테고리가 삭제되었습니다.',
+  },
+  CATEGORY_ORDER_UPDATE_SUCCESS: {
+    httpCode: 200,
+    message: '카테고리 정렬 순서가 변경되었습니다.',
   },
   CATEGORY_LIST_SUCCESS: {
     httpCode: 200,
@@ -60,5 +69,10 @@ export const CtgResponse = {
     httpCode: 500,
     message: '카테고리 삭제 중 오류가 발생했습니다.',
     errorCode: 'CATEGORY_DELETE_FAILED',
+  },
+  CATEGORY_ORDER_UPDATE_FAILED: {
+    httpCode: 500,
+    message: '카테고리 정렬 순서 변경 중 오류가 발생했습니다.',
+    errorCode: 'CATEGORY_ORDER_UPDATE_FAILED',
   },
 } as const satisfies Record<string, ResponseCode>;

@@ -23,6 +23,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CtgResponse } from '../../common/response/ctg.response';
 import { ApiResponseDto } from '../../common/dto/api-response.dto';
 import { CreateCtgDto } from './dtos/create-ctg.dto';
+import { ReorderCtgDto } from './dtos/reorder-ctg.dto';
 import { UpdateCtgDto } from './dtos/update-ctg.dto';
 import { CtgService } from './ctg.service';
 
@@ -51,7 +52,6 @@ export class CtgController {
           ctgName: '운동',
           visibility: 'FRIENDS',
           colorCode: '#FF5733',
-          sortOrder: 0,
         },
       },
     },
@@ -105,6 +105,37 @@ export class CtgController {
     );
   }
 
+  @Patch('order')
+  @ApiOperation({ summary: '카테고리 순서 변경' })
+  @ApiBody({
+    type: ReorderCtgDto,
+    examples: {
+      default: {
+        value: {
+          ctgIds: [
+            '11111111-1111-1111-1111-111111111111',
+            '22222222-2222-2222-2222-222222222222',
+          ],
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: '카테고리 순서 변경 성공',
+  })
+  async reorder(
+    @Request() req: { user?: { userId?: string } },
+    @Body() dto: ReorderCtgDto,
+  ) {
+    const ctgs = await this.ctgService.reorder(this.getUserId(req), dto.ctgIds);
+    return ApiResponseDto.success(
+      ctgs,
+      CtgResponse.CATEGORY_ORDER_UPDATE_SUCCESS.message,
+      CtgResponse.CATEGORY_ORDER_UPDATE_SUCCESS.httpCode,
+    );
+  }
+
   @Patch(':ctgId')
   @ApiOperation({ summary: '카테고리 수정' })
   @ApiBody({
@@ -115,7 +146,6 @@ export class CtgController {
           ctgName: '독서',
           visibility: 'PRIVATE',
           colorCode: '#33AAFF',
-          sortOrder: 2,
           isEnded: false,
         },
       },

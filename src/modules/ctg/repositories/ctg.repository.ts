@@ -31,16 +31,6 @@ export class CtgRepository {
     return this.repository;
   }
 
-  async countActiveByUserId(usrId: string): Promise<number> {
-    if (!this.repository) {
-      return 0;
-    }
-
-    return this.repository.count({
-      where: { usrId, isDeleted: false },
-    });
-  }
-
   async findByUserAndName(
     usrId: string,
     ctgName: string,
@@ -95,5 +85,9 @@ export class CtgRepository {
 
   async save(category: CtgEntity): Promise<CtgEntity> {
     return this.getRepository().save(category);
+  }
+
+  async saveMany(categories: CtgEntity[]): Promise<CtgEntity[]> {
+    return this.getRepository().save(categories);
   }
 }

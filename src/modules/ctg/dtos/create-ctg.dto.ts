@@ -1,14 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEnum,
-  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
   Length,
   Matches,
-  Max,
-  Min,
 } from 'class-validator';
 import { VisibilityType } from '../enums/visibility-type.enum';
 
@@ -42,17 +39,4 @@ export class CreateCtgDto {
   @IsString()
   @Matches(/^#[0-9A-Fa-f]{6}$/)
   colorCode?: string;
-
-  @ApiPropertyOptional({
-    description: '정렬 순서',
-    example: 0,
-    default: 0,
-    minimum: -32768,
-    maximum: 32767,
-  })
-  @IsOptional()
-  @IsInt()
-  @Min(-32768)
-  @Max(32767)
-  sortOrder?: number;
 }
