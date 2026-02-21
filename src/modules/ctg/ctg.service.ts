@@ -204,12 +204,7 @@ export class CtgService {
     category.deletedAt = new Date();
 
     try {
-      await repo.save(category);
-      const restCategories = await repo.findAllByUser(userId);
-      for (let i = 0; i < restCategories.length; i += 1) {
-        restCategories[i].sortOrder = i;
-      }
-      await repo.saveMany(restCategories);
+      await repo.softDeleteAndReindex(category, userId);
       return { ctgId };
     } catch {
       throw new BusinessException(CtgResponse.CATEGORY_DELETE_FAILED);
@@ -276,11 +271,7 @@ export class CtgService {
     }
 
     try {
-      await Promise.all(
-        reorderedCategories.map((reorderedCategory) =>
-          repo.save(reorderedCategory),
-        ),
-      );
+      await repo.saveMany(reorderedCategories);
       return reorderedCategories.map((category) =>
         this.toCategoryResult(category),
       );

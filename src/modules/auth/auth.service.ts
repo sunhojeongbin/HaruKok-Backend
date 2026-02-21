@@ -460,13 +460,24 @@ export class AuthService {
         return null;
       }
 
-      const passwordMatched = await argon2.verify(user.password, password);
-      if (!passwordMatched) {
+      try {
+        const passwordMatched = await argon2.verify(user.password, password);
+        if (!passwordMatched) {
+          return null;
+        }
+      } catch {
         return null;
       }
     } else if (user.passwordHash && user.passwordHash.startsWith('$argon2')) {
-      const passwordMatched = await argon2.verify(user.passwordHash, password);
-      if (!passwordMatched) {
+      try {
+        const passwordMatched = await argon2.verify(
+          user.passwordHash,
+          password,
+        );
+        if (!passwordMatched) {
+          return null;
+        }
+      } catch {
         return null;
       }
     } else {

@@ -105,4 +105,27 @@ export class CtgRepository {
   async saveMany(categories: CtgEntity[]): Promise<CtgEntity[]> {
     return this.getRepository().save(categories);
   }
+
+  /** @description 카테고리 소프트 삭제와 잔여 카테고리 재정렬을 트랜잭션으로 처리 */
+  async softDeleteAndReindex(
+    category: CtgEntity,
+    usrId: string,
+  ): Promise<void> {
+    const repository = this.getRepository();
+
+    await repository.manager.transaction(async (manager) => {
+      await manager.save(CtgEntity, category);
+
+      const restCategories = await manager.find(CtgEntity, {
+        where: { usrId, isDeleted: false },
+        order: { sortOrder: 'ASC', createdAt: 'ASC' },
+      });
+
+      for (let i = 0; i < restCategories.length; i += 1) {
+        restCategories[i].sortOrder = i;
+      }
+
+      await manager.save(CtgEntity, restCategories);
+    });
+  }
 }
