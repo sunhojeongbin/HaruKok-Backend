@@ -91,6 +91,8 @@ export class AuthService {
     id: '00000000-0000-0000-0000-000000000001',
     name: '홍길동',
   };
+  private readonly ALLOW_FALLBACK_USER =
+    process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'e2e';
   private fallbackRefreshToken: string | null = null;
 
   /** @description 이메일을 소문자/공백 제거 형태로 정규화 메소드 */
@@ -417,6 +419,10 @@ export class AuthService {
     const normalizedEmail = this.normalizeEmail(email);
 
     if (!this.usersRepository || !this.usersRepository.isReady()) {
+      if (!this.ALLOW_FALLBACK_USER) {
+        return null;
+      }
+
       if (
         normalizedEmail === this.FALLBACK_USER.email &&
         password === this.FALLBACK_USER.password
@@ -498,6 +504,10 @@ export class AuthService {
     }
 
     if (!this.usersRepository || !this.usersRepository.isReady()) {
+      if (!this.ALLOW_FALLBACK_USER) {
+        return null;
+      }
+
       if (
         payload.sub !== this.FALLBACK_USER.id ||
         this.fallbackRefreshToken !== refreshToken
@@ -540,7 +550,9 @@ export class AuthService {
    */
   async logout(refreshToken: string | null): Promise<void> {
     if (!this.usersRepository || !this.usersRepository.isReady()) {
-      this.fallbackRefreshToken = null;
+      if (this.ALLOW_FALLBACK_USER) {
+        this.fallbackRefreshToken = null;
+      }
       return;
     }
 
@@ -570,7 +582,7 @@ export class AuthService {
    */
   async getUserById(userId: string): Promise<UserInfo | null> {
     if (!this.usersRepository || !this.usersRepository.isReady()) {
-      if (userId === this.FALLBACK_USER.id) {
+      if (this.ALLOW_FALLBACK_USER && userId === this.FALLBACK_USER.id) {
         return {
           id: this.FALLBACK_USER.id,
           name: this.FALLBACK_USER.name,

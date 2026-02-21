@@ -107,7 +107,13 @@ export class AuthController {
       return null;
     }
 
-    return decodeURIComponent(refreshCookie.substring('refreshToken='.length));
+    try {
+      return decodeURIComponent(
+        refreshCookie.substring('refreshToken='.length),
+      );
+    } catch {
+      return null;
+    }
   }
 
   /** @description 이메일 인증 번호를 메일로 전송하는 API */
