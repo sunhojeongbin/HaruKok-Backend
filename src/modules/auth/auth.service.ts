@@ -26,6 +26,7 @@ type SignupPayload = {
 
 /** @description 로그인 처리 결과 */
 type LoginResult = {
+  id: string;
   email: string;
   name: string;
   accessToken: string;
@@ -439,6 +440,7 @@ export class AuthService {
         const tokenPair = this.issueTokenPair(payload);
         this.fallbackRefreshToken = tokenPair.refreshToken;
         return {
+          id: this.FALLBACK_USER.id,
           name: this.FALLBACK_USER.name,
           email: this.FALLBACK_USER.email,
           accessToken: tokenPair.accessToken,
@@ -496,6 +498,7 @@ export class AuthService {
     await this.usersRepository.save(user);
 
     return {
+      id: user.usrId,
       name: user.usrName,
       email: user.usrEmail ?? '',
       accessToken: tokenPair.accessToken,
