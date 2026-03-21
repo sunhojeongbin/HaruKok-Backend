@@ -29,9 +29,18 @@ export const TodoResponse = {
     message: '메모는 최대 1000자까지 입력할 수 있습니다.',
     errorCode: 'TODO_MEMO_INVALID',
   },
+  TODO_NOT_FOUND: {
+    httpCode: 404,
+    message: '투두를 찾을 수 없습니다.',
+    errorCode: 'TODO_NOT_FOUND',
+  },
   TODO_CREATE_SUCCESS: {
     httpCode: 201,
     message: '투두가 생성되었습니다.',
+  },
+  TODO_COMPLETION_UPDATE_SUCCESS: {
+    httpCode: 200,
+    message: '투두 완료 상태가 변경되었습니다.',
   },
   TODO_LIST_SUCCESS: {
     httpCode: 200,
@@ -46,5 +55,10 @@ export const TodoResponse = {
     httpCode: 500,
     message: '투두 목록 조회 중 오류가 발생했습니다.',
     errorCode: 'TODO_LIST_FAILED',
+  },
+  TODO_COMPLETION_UPDATE_FAILED: {
+    httpCode: 500,
+    message: '투두 완료 상태 변경 중 오류가 발생했습니다.',
+    errorCode: 'TODO_COMPLETION_UPDATE_FAILED',
   },
 } as const satisfies Record<string, ResponseCode>;

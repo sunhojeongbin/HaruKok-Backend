@@ -185,4 +185,43 @@ export class TodoService {
       throw new BusinessException(TodoResponse.TODO_CREATE_FAILED);
     }
   }
+
+  /**
+   * @description 로그인 사용자의 투두 완료 상태를 변경
+   * @param userId 사용자 ID
+   * @param todoId 완료 상태를 변경할 투두 ID
+   * @param dto 완료 상태 변경 요청 데이터
+   */
+  async updateCompletion(
+    userId: string,
+    todoId: string,
+  ): Promise<TodoListItem> {
+    const todo = await this.todoRepository.findByIdAndUser(todoId, userId);
+    if (!todo) {
+      throw new BusinessException(TodoResponse.TODO_NOT_FOUND);
+    }
+
+    const toggledCompletion = !todo.isCompleted;
+    todo.isCompleted = toggledCompletion;
+    if (toggledCompletion) {
+      todo.completedAt = new Date();
+    } else {
+      todo.completedAt = null;
+    }
+
+    try {
+      const saved = await this.todoRepository.save(todo);
+      return this.toTodoListItem(saved);
+    } catch (error) {
+      if (error instanceof BusinessException) {
+        throw error;
+      }
+
+      if (error instanceof QueryFailedError) {
+        throw new BusinessException(TodoResponse.TODO_COMPLETION_UPDATE_FAILED);
+      }
+
+      throw new BusinessException(TodoResponse.TODO_COMPLETION_UPDATE_FAILED);
+    }
+  }
 }

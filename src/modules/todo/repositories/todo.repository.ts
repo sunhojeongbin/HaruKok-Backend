@@ -52,6 +52,25 @@ export class TypeOrmTodoRepository implements TodoRepositoryPort {
     });
   }
 
+  /** @description 투두 ID/사용자 ID로 활성 투두 단건 조회 */
+  async findByIdAndUser(
+    todoId: string,
+    usrId: string,
+  ): Promise<TodoEntity | null> {
+    return this.repository.findOne({
+      where: {
+        todoId,
+        usrId,
+        isDeleted: false,
+      },
+    });
+  }
+
+  /** @description 투두 엔티티 저장 */
+  save(todo: TodoEntity): Promise<TodoEntity> {
+    return this.repository.save(todo);
+  }
+
   /** @description 사용자/월 조건으로 투두 목록 조회 */
   findByUserAndMonth(
     usrId: string,
