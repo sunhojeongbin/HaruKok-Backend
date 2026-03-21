@@ -63,6 +63,7 @@ export class AuthFallbackService {
     });
 
     return {
+      id: this.fallbackUser.id,
       name: this.fallbackUser.name,
       email: this.fallbackUser.email,
       accessToken: tokenPair.accessToken,

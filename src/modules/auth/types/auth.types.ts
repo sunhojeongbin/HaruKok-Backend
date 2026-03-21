@@ -14,6 +14,7 @@ export type TokenPayload = {
 
 /** @description 로그인 처리 결과 */
 export type LoginResult = {
+  id: string;
   email: string;
   name: string;
   accessToken: string;
