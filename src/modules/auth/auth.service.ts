@@ -234,6 +234,7 @@ export class AuthService {
     await this.usrRepository.save(user);
 
     return {
+      id: user.usrId,
       name: user.usrNm,
       email: user.usrEmail ?? '',
       accessToken: tokenPair.accessToken,
