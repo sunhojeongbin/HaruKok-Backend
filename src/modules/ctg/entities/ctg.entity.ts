@@ -8,7 +8,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { UsrEntity } from '../../users/entities/usr.entity';
+import { UsrEntity } from '../../usr/entities/usr.entity';
 import { VisibilityType } from '../enums/visibility-type.enum';
 
 /**
@@ -35,7 +35,7 @@ export class CtgEntity {
 
   @ManyToOne(() => UsrEntity, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'usr_id', referencedColumnName: 'usrId' })
-  user: UsrEntity;
+  usr: UsrEntity;
 
   @Column({
     name: 'ctg_name',
@@ -59,7 +59,7 @@ export class CtgEntity {
     name: 'color_code',
     type: 'char',
     length: 7,
-    default: '#000000',
+    default: '#AAD1F0',
     comment: '색상 코드', // HEX 색상 코드 ex) #FF5733'
   })
   colorCode: string;

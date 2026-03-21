@@ -27,6 +27,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { SendEmailCodeDto } from './dtos/send-email-code.dto';
 import { VerifyEmailCodeDto } from './dtos/verify-email-code.dto';
 import { SignupDto } from './dtos/signup.dto';
+import { DeviceType } from './enums/refresh-token.enum';
 import { Request, Response } from 'express';
 
 /**
@@ -36,7 +37,6 @@ import { Request, Response } from 'express';
  * @property accessToken JWT 액세스 토큰
  */
 export class LoginResponseDto {
-  id: string;
   email: string;
   name: string;
   accessToken: string;
@@ -61,6 +61,26 @@ export class LogoutResponseDto {
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  /** @description 요청 기반 클라이언트 접속 정보를 추출한다. */
+  private getClientContext(req: Request): {
+    deviceName: string | null;
+    deviceType: DeviceType;
+    ipAddress: string | null;
+  } {
+    const rawUserAgent = req.headers['user-agent'];
+    const userAgent =
+      typeof rawUserAgent === 'string' ? rawUserAgent.trim() : '';
+
+    return {
+      deviceName:
+        userAgent.length > 0
+          ? userAgent.substring(0, Math.min(userAgent.length, 100))
+          : null,
+      deviceType: DeviceType.WEB,
+      ipAddress: req.ip || req.socket.remoteAddress || null,
+    };
+  }
 
   /**
    * @description 리프레시 토큰 쿠키 옵션을 생성한다.
@@ -151,6 +171,18 @@ export class AuthController {
         message: '이메일 발송에 실패했습니다. 잠시 후 다시 시도해주세요.',
         success: false,
         errorCode: 'EMAIL_SEND_FAILED',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 409,
+    description: '이미 가입된 이메일',
+    schema: {
+      example: {
+        httpCode: 409,
+        message: '이미 가입된 이메일입니다.',
+        success: false,
+        errorCode: 'SIGNUP_ALREADY_EXISTS',
       },
     },
   })
@@ -335,9 +367,14 @@ export class AuthController {
   })
   async login(
     @Body() dto: LoginDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const result = await this.authService.login(dto.email, dto.password);
+    const result = await this.authService.login(
+      dto.email,
+      dto.password,
+      this.getClientContext(req),
+    );
 
     if (!result) {
       throw new BusinessException(AuthResponse.LOGIN_FAIL);
@@ -351,7 +388,6 @@ export class AuthController {
 
     return ApiResponseDto.success<LoginResponseDto>(
       {
-        id: result.id,
         email: result.email,
         name: result.name,
         accessToken: result.accessToken,

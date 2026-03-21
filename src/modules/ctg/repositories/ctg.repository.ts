@@ -1,42 +1,20 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CtgEntity } from '../entities/ctg.entity';
-import { VisibilityType } from '../enums/visibility-type.enum';
-import { UsrEntity } from '../../users/entities/usr.entity';
+import { UsrEntity } from '../../usr/entities/usr.entity';
+import {
+  CreateCategoryWithLimitParams,
+  CtgRepositoryPort,
+} from './ctg.repository.port';
 
-/** @description 카테고리 생성에 필요한 저장 파라미터 */
-type CreateCategoryParams = {
-  usrId: string;
-  ctgName: string;
-  visibility: VisibilityType;
-  colorCode: string;
-  sortOrder: number;
-};
-
-type CreateCategoryWithLimitParams = Omit<CreateCategoryParams, 'sortOrder'>;
-
-/** @description 카테고리 리포지토리 래퍼 */
+/** @description TypeORM 기반 카테고리 저장소 */
 @Injectable()
-export class CtgRepository {
+export class TypeOrmCtgRepository implements CtgRepositoryPort {
   constructor(
-    @Optional()
     @InjectRepository(CtgEntity)
-    private readonly repository?: Repository<CtgEntity>,
+    private readonly repository: Repository<CtgEntity>,
   ) {}
-
-  /** @description TypeORM Repository 의존성 주입 여부 확인 */
-  isReady(): boolean {
-    return Boolean(this.repository);
-  }
-
-  /** @description 내부 TypeORM Repository를 반환 */
-  private getRepository(): Repository<CtgEntity> {
-    if (!this.repository) {
-      throw new Error('CtgRepository is not initialized');
-    }
-    return this.repository;
-  }
 
   /** @description 사용자/카테고리명으로 활성 카테고리를 조회 */
   async findByUserAndName(
@@ -44,10 +22,6 @@ export class CtgRepository {
     ctgName: string,
     excludeCtgId?: string,
   ): Promise<CtgEntity | null> {
-    if (!this.repository) {
-      return null;
-    }
-
     const query = this.repository
       .createQueryBuilder('ctg')
       .where('ctg.usr_id = :usrId', { usrId })
@@ -71,10 +45,6 @@ export class CtgRepository {
     ctgId: string,
     usrId: string,
   ): Promise<CtgEntity | null> {
-    if (!this.repository) {
-      return null;
-    }
-
     return this.repository.findOne({
       where: { ctgId, usrId, isDeleted: false },
     });
@@ -82,34 +52,18 @@ export class CtgRepository {
 
   /** @description 사용자 활성 카테고리 목록을 정렬 순서 기준으로 조회 */
   async findAllByUser(usrId: string): Promise<CtgEntity[]> {
-    if (!this.repository) {
-      return [];
-    }
-
     return this.repository.find({
       where: { usrId, isDeleted: false },
       order: { sortOrder: 'ASC', createdAt: 'ASC' },
     });
   }
 
-  /** @description 카테고리 엔티티를 생성하고 저장 */
-  async createAndSave(params: CreateCategoryParams): Promise<CtgEntity>;
-  async createAndSave(
+  /** @description 사용자별 최대 개수 제한을 검증하며 카테고리를 생성 */
+  async createWithUserLimit(
     params: CreateCategoryWithLimitParams,
     maxCategoryCount: number,
-  ): Promise<CtgEntity | null>;
-  async createAndSave(
-    params: CreateCategoryParams | CreateCategoryWithLimitParams,
-    maxCategoryCount?: number,
   ): Promise<CtgEntity | null> {
-    const repository = this.getRepository();
-
-    if (maxCategoryCount === undefined) {
-      const category = repository.create(params as CreateCategoryParams);
-      return repository.save(category);
-    }
-
-    return repository.manager.transaction(async (manager) => {
+    return await this.repository.manager.transaction(async (manager) => {
       await manager
         .getRepository(UsrEntity)
         .createQueryBuilder('usr')
@@ -142,12 +96,12 @@ export class CtgRepository {
 
   /** @description 카테고리 엔티티 단건을 저장 */
   async save(category: CtgEntity): Promise<CtgEntity> {
-    return this.getRepository().save(category);
+    return this.repository.save(category);
   }
 
   /** @description 카테고리 엔티티 배열을 일괄 저장 */
   async saveMany(categories: CtgEntity[]): Promise<CtgEntity[]> {
-    return this.getRepository().save(categories);
+    return this.repository.save(categories);
   }
 
   /** @description 카테고리 소프트 삭제와 잔여 카테고리 재정렬을 트랜잭션으로 처리 */
@@ -155,9 +109,7 @@ export class CtgRepository {
     category: CtgEntity,
     usrId: string,
   ): Promise<void> {
-    const repository = this.getRepository();
-
-    await repository.manager.transaction(async (manager) => {
+    await this.repository.manager.transaction(async (manager) => {
       await manager.save(CtgEntity, category);
 
       const restCategories = await manager.find(CtgEntity, {

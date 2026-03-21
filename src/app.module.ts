@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './modules/auth/auth.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CtgModule } from './modules/ctg/ctg.module';
+import { TodoModule } from './modules/todo/todo.module';
 
 const databaseImports =
   process.env.SKIP_DB === 'true'
@@ -38,6 +39,7 @@ const databaseImports =
     }),
     AuthModule,
     CtgModule,
+    TodoModule,
     ...databaseImports,
   ],
   controllers: [],
