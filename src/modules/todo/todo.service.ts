@@ -190,28 +190,22 @@ export class TodoService {
    * @description 로그인 사용자의 투두 완료 상태를 변경
    * @param userId 사용자 ID
    * @param todoId 완료 상태를 변경할 투두 ID
-   * @param dto 완료 상태 변경 요청 데이터
+   * @returns 완료 상태가 토글된 투두 정보
    */
   async updateCompletion(
     userId: string,
     todoId: string,
   ): Promise<TodoListItem> {
-    const todo = await this.todoRepository.findByIdAndUser(todoId, userId);
-    if (!todo) {
-      throw new BusinessException(TodoResponse.TODO_NOT_FOUND);
-    }
-
-    const toggledCompletion = !todo.isCompleted;
-    todo.isCompleted = toggledCompletion;
-    if (toggledCompletion) {
-      todo.completedAt = new Date();
-    } else {
-      todo.completedAt = null;
-    }
-
     try {
-      const saved = await this.todoRepository.save(todo);
-      return this.toTodoListItem(saved);
+      const updatedTodo = await this.todoRepository.toggleCompletionByIdAndUser(
+        todoId,
+        userId,
+      );
+      if (!updatedTodo) {
+        throw new BusinessException(TodoResponse.TODO_NOT_FOUND);
+      }
+
+      return this.toTodoListItem(updatedTodo);
     } catch (error) {
       if (error instanceof BusinessException) {
         throw error;

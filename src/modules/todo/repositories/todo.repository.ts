@@ -52,11 +52,29 @@ export class TypeOrmTodoRepository implements TodoRepositoryPort {
     });
   }
 
-  /** @description 투두 ID/사용자 ID로 활성 투두 단건 조회 */
-  async findByIdAndUser(
+  /** @description 투두 완료 상태를 원자적으로 토글하고 변경된 투두를 반환 */
+  async toggleCompletionByIdAndUser(
     todoId: string,
     usrId: string,
   ): Promise<TodoEntity | null> {
+    const result = await this.repository
+      .createQueryBuilder()
+      .update(TodoEntity)
+      .set({
+        isCompleted: () => 'NOT "is_completed"',
+        completedAt: () =>
+          'CASE WHEN NOT "is_completed" THEN NOW() ELSE NULL END',
+      })
+      .where('todo_id = :todoId', { todoId })
+      .andWhere('usr_id = :usrId', { usrId })
+      .andWhere('is_deleted = false')
+      .returning(['todo_id'])
+      .execute();
+
+    if (!result.affected) {
+      return null;
+    }
+
     return this.repository.findOne({
       where: {
         todoId,
@@ -64,11 +82,6 @@ export class TypeOrmTodoRepository implements TodoRepositoryPort {
         isDeleted: false,
       },
     });
-  }
-
-  /** @description 투두 엔티티 저장 */
-  save(todo: TodoEntity): Promise<TodoEntity> {
-    return this.repository.save(todo);
   }
 
   /** @description 사용자/월 조건으로 투두 목록 조회 */

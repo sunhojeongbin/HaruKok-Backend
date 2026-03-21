@@ -27,13 +27,11 @@ export class UnavailableTodoRepository implements TodoRepositoryPort {
     return this.rejectRepositoryNotReady();
   }
 
-  findByIdAndUser(_todoId: string, _usrId: string): Promise<TodoEntity | null> {
+  toggleCompletionByIdAndUser(
+    _todoId: string,
+    _usrId: string,
+  ): Promise<TodoEntity | null> {
     this.consume(_todoId, _usrId);
-    return this.rejectRepositoryNotReady();
-  }
-
-  save(_todo: TodoEntity): Promise<TodoEntity> {
-    this.consume(_todo);
     return this.rejectRepositoryNotReady();
   }
 
