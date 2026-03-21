@@ -57,30 +57,31 @@ export class TypeOrmTodoRepository implements TodoRepositoryPort {
     todoId: string,
     usrId: string,
   ): Promise<TodoEntity | null> {
-    const result = await this.repository
-      .createQueryBuilder()
-      .update(TodoEntity)
-      .set({
-        isCompleted: () => 'NOT "is_completed"',
-        completedAt: () =>
-          'CASE WHEN NOT "is_completed" THEN NOW() ELSE NULL END',
-      })
-      .where('todo_id = :todoId', { todoId })
-      .andWhere('usr_id = :usrId', { usrId })
-      .andWhere('is_deleted = false')
-      .returning(['todo_id'])
-      .execute();
+    return this.repository.manager.transaction(async (manager) => {
+      const result = await manager
+        .createQueryBuilder()
+        .update(TodoEntity)
+        .set({
+          isCompleted: () => 'NOT "is_completed"',
+          completedAt: () =>
+            'CASE WHEN NOT "is_completed" THEN NOW() ELSE NULL END',
+        })
+        .where('todo_id = :todoId', { todoId })
+        .andWhere('usr_id = :usrId', { usrId })
+        .andWhere('is_deleted = false')
+        .execute();
 
-    if (!result.affected) {
-      return null;
-    }
+      if (!result.affected) {
+        return null;
+      }
 
-    return this.repository.findOne({
-      where: {
-        todoId,
-        usrId,
-        isDeleted: false,
-      },
+      return manager.findOne(TodoEntity, {
+        where: {
+          todoId,
+          usrId,
+          isDeleted: false,
+        },
+      });
     });
   }
 
