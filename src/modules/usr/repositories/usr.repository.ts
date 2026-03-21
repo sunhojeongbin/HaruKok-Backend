@@ -39,6 +39,17 @@ export class UsrRepository {
     });
   }
 
+  /** @description 이메일로 활성 사용자 정보 조회 */
+  async findActiveByEmail(email: string): Promise<UsrEntity | null> {
+    if (!this.repository) {
+      return null;
+    }
+
+    return this.repository.findOne({
+      where: { usrEmail: email, isDeleted: false, usrStatCd: 'ACTIVE' },
+    });
+  }
+
   /** @description 사용자 ID로 사용자 정보 조회 */
   async findById(id: string): Promise<UsrEntity | null> {
     if (!this.repository) {
@@ -47,6 +58,17 @@ export class UsrRepository {
 
     return this.repository.findOne({
       where: { usrId: id, isDeleted: false },
+    });
+  }
+
+  /** @description 사용자 ID로 활성 사용자 정보 조회 */
+  async findActiveById(id: string): Promise<UsrEntity | null> {
+    if (!this.repository) {
+      return null;
+    }
+
+    return this.repository.findOne({
+      where: { usrId: id, isDeleted: false, usrStatCd: 'ACTIVE' },
     });
   }
 

@@ -84,12 +84,13 @@ export class AuthTokenService {
   verifyRefreshToken(refreshToken: string): TokenPayload | null {
     let payload: { sub?: string; email?: string; jti?: string };
     try {
+      const secret = this.getRefreshTokenSecret();
       payload = this.jwtService.verify<{
         sub?: string;
         email?: string;
         jti?: string;
       }>(refreshToken, {
-        secret: this.getRefreshTokenSecret(),
+        secret,
       });
     } catch {
       return null;

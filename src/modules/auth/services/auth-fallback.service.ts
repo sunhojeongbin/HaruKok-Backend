@@ -19,14 +19,14 @@ export class AuthFallbackService {
   };
 
   private readonly allowFallbackUser =
-    process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'e2e';
+    process.env.AUTH_FALLBACK_ENABLED === 'true';
 
   constructor(
     private readonly authTokenService: AuthTokenService,
     private readonly refreshTokenStore: AuthRefreshTokenStoreService,
   ) {}
 
-  /** @description fallback 로그인 사용자 허용 여부를 반환한다. */
+  /** @description AUTH_FALLBACK_ENABLED=true 일 때 fallback 로그인 사용자 허용 여부를 반환한다. */
   isEnabled(): boolean {
     return this.allowFallbackUser;
   }

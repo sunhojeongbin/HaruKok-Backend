@@ -71,11 +71,6 @@ export class AuthController {
     const rawUserAgent = req.headers['user-agent'];
     const userAgent =
       typeof rawUserAgent === 'string' ? rawUserAgent.trim() : '';
-    const forwardedFor = req.headers['x-forwarded-for'];
-    const ipFromHeader =
-      typeof forwardedFor === 'string'
-        ? forwardedFor.split(',')[0].trim()
-        : null;
 
     return {
       deviceName:
@@ -83,7 +78,7 @@ export class AuthController {
           ? userAgent.substring(0, Math.min(userAgent.length, 100))
           : null,
       deviceType: DeviceType.WEB,
-      ipAddress: ipFromHeader || req.ip || null,
+      ipAddress: req.ip || req.socket.remoteAddress || null,
     };
   }
 

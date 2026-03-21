@@ -10,6 +10,7 @@ import { AuthPasswordService } from './services/auth-password.service';
 import { AuthRefreshTokenStoreService } from './services/rft-store.service';
 import { AuthTokenService } from './services/auth-token.service';
 import { LoginResult, RefreshResult, UserInfo } from './types/auth.types';
+import { UsrEntity } from '../usr/entities/usr.entity';
 
 type LoginContext = {
   deviceName?: string | null;
@@ -31,6 +32,8 @@ export class AuthService {
   ) {}
 
   private readonly SIGNUP_TTL_SEC = 30 * 60;
+  private readonly MAX_FAILED_LOGIN_COUNT = 5;
+  private readonly LOCK_DURATION_MINUTES = 30;
 
   /** @description 이메일을 소문자/공백 제거 형태로 정규화 메소드 */
   private normalizeEmail(email: string): string {
@@ -40,6 +43,25 @@ export class AuthService {
   /** @description 이름 문자열의 앞뒤 공백을 제거하는 메소드 */
   private normalizeName(name: string): string {
     return name.trim();
+  }
+
+  /** @description 로그인 실패 카운트를 증가시키고 필요 시 계정을 잠금 처리한다. */
+  private applyFailedLoginAttempt(user: UsrEntity): void {
+    const nextFailedCount = (user.failedLoginCnt ?? 0) + 1;
+    user.failedLoginCnt = nextFailedCount;
+
+    if (nextFailedCount >= this.MAX_FAILED_LOGIN_COUNT) {
+      user.usrStatCd = 'LOCKED';
+      user.lockedUntil = new Date(
+        Date.now() + this.LOCK_DURATION_MINUTES * 60 * 1000,
+      );
+    }
+  }
+
+  /** @description 로그인 성공 시 실패 카운트/잠금 정보를 초기화한다. */
+  private resetLoginAttemptState(user: UsrEntity): void {
+    user.failedLoginCnt = 0;
+    user.lockedUntil = null;
   }
 
   /** @description 사용자 리포지토리 준비 상태를 확인하고 반환하는 메소드 */
@@ -177,7 +199,7 @@ export class AuthService {
       return this.authFallbackService.tryLogin(normalizedEmail, password);
     }
 
-    const user = await this.usrRepository.findByEmail(normalizedEmail);
+    const user = await this.usrRepository.findActiveByEmail(normalizedEmail);
     if (!user) {
       return null;
     }
@@ -188,6 +210,8 @@ export class AuthService {
       password,
     );
     if (!passwordMatched) {
+      this.applyFailedLoginAttempt(user);
+      await this.usrRepository.save(user);
       return null;
     }
 
@@ -206,7 +230,7 @@ export class AuthService {
       lastUsedAt: null,
     });
     user.lastLoginAt = new Date();
-    user.failedLoginCnt = 0;
+    this.resetLoginAttemptState(user);
     await this.usrRepository.save(user);
 
     return {
@@ -237,7 +261,7 @@ export class AuthService {
       return this.authFallbackService.tryRefresh(payload, refreshToken);
     }
 
-    const user = await this.usrRepository.findById(payload.sub);
+    const user = await this.usrRepository.findActiveById(payload.sub);
     if (!user) {
       return null;
     }
@@ -260,12 +284,9 @@ export class AuthService {
       refreshToken: tokenPair.refreshToken,
       jti: tokenPair.jti,
       expiresAt: tokenPair.refreshTokenExpiresAt,
-      deviceName: null,
-      deviceType: null,
-      ipAddress: null,
       lastUsedAt: new Date(),
     });
-    await this.usrRepository.save(user);
+    // await this.usrRepository.save(user);
 
     return tokenPair;
   }
@@ -317,7 +338,7 @@ export class AuthService {
       return this.authFallbackService.getUserById(userId);
     }
 
-    const user = await this.usrRepository.findById(userId);
+    const user = await this.usrRepository.findActiveById(userId);
     if (!user) {
       return null;
     }

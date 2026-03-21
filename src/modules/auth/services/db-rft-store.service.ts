@@ -49,12 +49,16 @@ export class DbAuthRefreshTokenStoreService extends AuthRefreshTokenStoreService
 
     existing.tokenHash = this.hashToken(params.refreshToken);
     existing.jti = params.jti;
-    existing.deviceName = params.deviceName ?? null;
-    existing.deviceType = params.deviceType ?? null;
-    existing.ipAddress = params.ipAddress ?? null;
+    existing.deviceName =
+      params.deviceName === undefined ? existing.deviceName : params.deviceName;
+    existing.deviceType =
+      params.deviceType === undefined ? existing.deviceType : params.deviceType;
+    existing.ipAddress =
+      params.ipAddress === undefined ? existing.ipAddress : params.ipAddress;
     existing.issuedAt = new Date();
     existing.expiresAt = params.expiresAt;
-    existing.lastUsedAt = params.lastUsedAt ?? null;
+    existing.lastUsedAt =
+      params.lastUsedAt === undefined ? existing.lastUsedAt : params.lastUsedAt;
     existing.isRevoked = false;
     existing.revokedAt = null;
     existing.revokeReason = null;
