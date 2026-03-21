@@ -4,16 +4,19 @@ import { Repository } from 'typeorm';
 import { UsrEntity } from '../entities/usr.entity';
 
 /** @description 사용자 생성에 필요한 저장 파라미터 */
-type CreateUserParams = {
-  usrEmail: string;
-  usrName: string;
-  password: string;
-  passwordHash: string;
+type CreateUsrParams = {
+  usrEmail: string | null;
+  usrNm: string;
+  pwd: string | null;
+  pwdHash: string | null;
+  joinTypeCd?: string;
+  usrStatCd?: string;
+  usrRoleCd?: string;
 };
 
 /** @description 사용자 리포지토리 래퍼 */
 @Injectable()
-export class UsersRepository {
+export class UsrRepository {
   constructor(
     @Optional()
     @InjectRepository(UsrEntity)
@@ -32,7 +35,7 @@ export class UsersRepository {
     }
 
     return this.repository.findOne({
-      where: { usrEmail: email },
+      where: { usrEmail: email, isDeleted: false },
     });
   }
 
@@ -43,26 +46,26 @@ export class UsersRepository {
     }
 
     return this.repository.findOne({
-      where: { usrId: id },
+      where: { usrId: id, isDeleted: false },
     });
   }
 
   /** @description 사용자 엔티티를 생성하고 저장 */
-  async createAndSave(params: CreateUserParams): Promise<UsrEntity> {
+  async createAndSave(params: CreateUsrParams): Promise<UsrEntity> {
     if (!this.repository) {
-      throw new Error('UsersRepository is not initialized');
+      throw new Error('UsrRepository is not initialized');
     }
 
-    const user = this.repository.create(params);
-    return this.repository.save(user);
+    const usr = this.repository.create(params);
+    return this.repository.save(usr);
   }
 
   /** @description 사용자 엔티티를 저장 */
-  async save(user: UsrEntity): Promise<UsrEntity> {
+  async save(usr: UsrEntity): Promise<UsrEntity> {
     if (!this.repository) {
-      throw new Error('UsersRepository is not initialized');
+      throw new Error('UsrRepository is not initialized');
     }
 
-    return this.repository.save(user);
+    return this.repository.save(usr);
   }
 }

@@ -53,7 +53,7 @@ describe('Auth (e2e)', () => {
 
     const refreshResponse = await request(httpServer())
       .post('/auth/refresh')
-      .set('Cookie', refreshTokenCookie as string)
+      .set('Cookie', refreshTokenCookie)
       .expect(200);
 
     expect(refreshResponse.body?.data?.accessToken).toBeDefined();
@@ -85,12 +85,12 @@ describe('Auth (e2e)', () => {
 
     await request(httpServer())
       .post('/auth/logout')
-      .set('Cookie', refreshTokenCookie as string)
+      .set('Cookie', refreshTokenCookie)
       .expect(200);
 
     await request(httpServer())
       .post('/auth/refresh')
-      .set('Cookie', refreshTokenCookie as string)
+      .set('Cookie', refreshTokenCookie)
       .expect(401);
   });
 
