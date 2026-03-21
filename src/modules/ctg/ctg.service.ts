@@ -1,12 +1,16 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { QueryFailedError } from 'typeorm';
 import { BusinessException } from '../../common/exceptions/business.exception';
+import { ResponseCode } from '../../common/response/response-code';
 import { CtgResponse } from '../../common/response/ctg.response';
 import { CreateCtgDto } from './dtos/create-ctg.dto';
 import { UpdateCtgDto } from './dtos/update-ctg.dto';
 import { CtgEntity } from './entities/ctg.entity';
 import { VisibilityType } from './enums/visibility-type.enum';
-import { CtgRepository } from './repositories/ctg.repository';
+import {
+  CTG_REPOSITORY,
+  CtgRepositoryPort,
+} from './repositories/ctg.repository.port';
 
 /** @description 카테고리 응답 데이터 형식 */
 type CategoryResult = {
@@ -26,19 +30,11 @@ type CategoryResult = {
 @Injectable()
 export class CtgService {
   constructor(
-    @Optional()
-    private readonly ctgRepository?: CtgRepository,
+    @Inject(CTG_REPOSITORY)
+    private readonly ctgRepository: CtgRepositoryPort,
   ) {}
 
   private readonly MAX_CATEGORY_COUNT = 10; // 사용자당 최대 카테고리 수 제한
-
-  /** @description 카테고리 리포지토리 준비 상태를 확인하고 반환하는 메소드 */
-  private getCtgRepository(): CtgRepository {
-    if (!this.ctgRepository || !this.ctgRepository.isReady()) {
-      throw new BusinessException(CtgResponse.CATEGORY_REPOSITORY_NOT_READY);
-    }
-    return this.ctgRepository;
-  }
 
   /**
    * @description 카테고리 이름의 앞뒤 공백을 제거 메소드
@@ -47,6 +43,27 @@ export class CtgService {
    */
   private normalizeCategoryName(ctgName: string): string {
     return ctgName.trim();
+  }
+
+  /** @description 저장소 예외를 도메인 예외로 변환 */
+  private throwPersistenceException(
+    error: unknown,
+    fallbackResponse: ResponseCode,
+  ): never {
+    if (error instanceof BusinessException) {
+      throw error;
+    }
+
+    if (error instanceof QueryFailedError) {
+      const driverError = (
+        error as QueryFailedError & { driverError?: { code?: string } }
+      ).driverError;
+      if (driverError?.code === '23505') {
+        throw new BusinessException(CtgResponse.CATEGORY_NAME_DUPLICATED);
+      }
+    }
+
+    throw new BusinessException(fallbackResponse);
   }
 
   /**
@@ -76,19 +93,21 @@ export class CtgService {
    * @returns 생성된 카테고리 정보
    */
   async create(userId: string, dto: CreateCtgDto): Promise<CategoryResult> {
-    const repo = this.getCtgRepository();
     const normalizedName = this.normalizeCategoryName(dto.ctgName);
     if (!normalizedName || normalizedName.length > 10) {
       throw new BusinessException(CtgResponse.CATEGORY_NAME_INVALID);
     }
 
-    const duplicated = await repo.findByUserAndName(userId, normalizedName);
+    const duplicated = await this.ctgRepository.findByUserAndName(
+      userId,
+      normalizedName,
+    );
     if (duplicated) {
       throw new BusinessException(CtgResponse.CATEGORY_NAME_DUPLICATED);
     }
 
     try {
-      const category = await repo.createAndSave(
+      const category = await this.ctgRepository.createWithUserLimit(
         {
           usrId: userId,
           ctgName: normalizedName,
@@ -104,18 +123,7 @@ export class CtgService {
 
       return this.toCategoryResult(category);
     } catch (error) {
-      if (error instanceof BusinessException) {
-        throw error;
-      }
-      if (error instanceof QueryFailedError) {
-        const driverError = (
-          error as QueryFailedError & { driverError?: { code?: string } }
-        ).driverError;
-        if (driverError?.code === '23505') {
-          throw new BusinessException(CtgResponse.CATEGORY_NAME_DUPLICATED);
-        }
-      }
-      throw new BusinessException(CtgResponse.CATEGORY_CREATE_FAILED);
+      this.throwPersistenceException(error, CtgResponse.CATEGORY_CREATE_FAILED);
     }
   }
 
@@ -131,8 +139,7 @@ export class CtgService {
     ctgId: string,
     dto: UpdateCtgDto,
   ): Promise<CategoryResult> {
-    const repo = this.getCtgRepository();
-    const category = await repo.findByIdAndUser(ctgId, userId);
+    const category = await this.ctgRepository.findByIdAndUser(ctgId, userId);
     if (!category) {
       throw new BusinessException(CtgResponse.CATEGORY_NOT_FOUND);
     }
@@ -144,7 +151,7 @@ export class CtgService {
       }
 
       if (normalizedName !== category.ctgName) {
-        const duplicated = await repo.findByUserAndName(
+        const duplicated = await this.ctgRepository.findByUserAndName(
           userId,
           normalizedName,
           ctgId,
@@ -171,18 +178,10 @@ export class CtgService {
     }
 
     try {
-      const updated = await repo.save(category);
+      const updated = await this.ctgRepository.save(category);
       return this.toCategoryResult(updated);
     } catch (error) {
-      if (error instanceof QueryFailedError) {
-        const driverError = (
-          error as QueryFailedError & { driverError?: { code?: string } }
-        ).driverError;
-        if (driverError?.code === '23505') {
-          throw new BusinessException(CtgResponse.CATEGORY_NAME_DUPLICATED);
-        }
-      }
-      throw new BusinessException(CtgResponse.CATEGORY_UPDATE_FAILED);
+      this.throwPersistenceException(error, CtgResponse.CATEGORY_UPDATE_FAILED);
     }
   }
 
@@ -193,8 +192,7 @@ export class CtgService {
    * @returns 삭제된 카테고리 ID
    */
   async delete(userId: string, ctgId: string): Promise<{ ctgId: string }> {
-    const repo = this.getCtgRepository();
-    const category = await repo.findByIdAndUser(ctgId, userId);
+    const category = await this.ctgRepository.findByIdAndUser(ctgId, userId);
     if (!category) {
       throw new BusinessException(CtgResponse.CATEGORY_NOT_FOUND);
     }
@@ -203,7 +201,7 @@ export class CtgService {
     category.deletedAt = new Date();
 
     try {
-      await repo.softDeleteAndReindex(category, userId);
+      await this.ctgRepository.softDeleteAndReindex(category, userId);
       return { ctgId };
     } catch {
       throw new BusinessException(CtgResponse.CATEGORY_DELETE_FAILED);
@@ -217,8 +215,7 @@ export class CtgService {
    * @returns 조회된 카테고리 정보
    */
   async getById(userId: string, ctgId: string): Promise<CategoryResult> {
-    const repo = this.getCtgRepository();
-    const category = await repo.findByIdAndUser(ctgId, userId);
+    const category = await this.ctgRepository.findByIdAndUser(ctgId, userId);
     if (!category) {
       throw new BusinessException(CtgResponse.CATEGORY_NOT_FOUND);
     }
@@ -231,8 +228,7 @@ export class CtgService {
    * @returns 조회된 카테고리 목록
    */
   async getList(userId: string): Promise<CategoryResult[]> {
-    const repo = this.getCtgRepository();
-    const categories = await repo.findAllByUser(userId);
+    const categories = await this.ctgRepository.findAllByUser(userId);
     return categories.map((category) => this.toCategoryResult(category));
   }
 
@@ -243,8 +239,7 @@ export class CtgService {
    * @returns 재배치된 카테고리 목록
    */
   async reorder(userId: string, ctgIds: string[]): Promise<CategoryResult[]> {
-    const repo = this.getCtgRepository();
-    const categories = await repo.findAllByUser(userId);
+    const categories = await this.ctgRepository.findAllByUser(userId);
     if (ctgIds.length !== categories.length) {
       throw new BusinessException(CtgResponse.CATEGORY_ORDER_INVALID);
     }
@@ -270,7 +265,7 @@ export class CtgService {
     }
 
     try {
-      await repo.saveMany(reorderedCategories);
+      await this.ctgRepository.saveMany(reorderedCategories);
       return reorderedCategories.map((category) =>
         this.toCategoryResult(category),
       );
