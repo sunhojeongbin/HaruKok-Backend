@@ -52,6 +52,39 @@ export class TypeOrmTodoRepository implements TodoRepositoryPort {
     });
   }
 
+  /** @description 투두 완료 상태를 원자적으로 토글하고 변경된 투두를 반환 */
+  async toggleCompletionByIdAndUser(
+    todoId: string,
+    usrId: string,
+  ): Promise<TodoEntity | null> {
+    return this.repository.manager.transaction(async (manager) => {
+      const result = await manager
+        .createQueryBuilder()
+        .update(TodoEntity)
+        .set({
+          isCompleted: () => 'NOT "is_completed"',
+          completedAt: () =>
+            'CASE WHEN NOT "is_completed" THEN NOW() ELSE NULL END',
+        })
+        .where('todo_id = :todoId', { todoId })
+        .andWhere('usr_id = :usrId', { usrId })
+        .andWhere('is_deleted = false')
+        .execute();
+
+      if (!result.affected) {
+        return null;
+      }
+
+      return manager.findOne(TodoEntity, {
+        where: {
+          todoId,
+          usrId,
+          isDeleted: false,
+        },
+      });
+    });
+  }
+
   /** @description 사용자/월 조건으로 투두 목록 조회 */
   findByUserAndMonth(
     usrId: string,

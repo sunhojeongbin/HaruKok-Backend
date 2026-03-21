@@ -2,6 +2,9 @@ import {
   Body,
   Controller,
   Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
   Post,
   Query,
   Request,
@@ -118,6 +121,56 @@ export class TodoController {
       todo,
       TodoResponse.TODO_CREATE_SUCCESS.message,
       TodoResponse.TODO_CREATE_SUCCESS.httpCode,
+    );
+  }
+
+  /** @description 로그인 사용자의 투두 완료 상태 변경 API */
+  @Patch(':todoId/comp')
+  @ApiOperation({
+    summary: '투두 완료 상태 변경',
+    description:
+      '로그인 사용자의 투두 완료 상태를 토글합니다. 완료면 미완료로, 미완료면 완료로 변경합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '투두 완료 상태 변경 성공',
+    schema: {
+      example: {
+        httpCode: 200,
+        message: '투두 완료 상태가 변경되었습니다.',
+        success: true,
+        data: {
+          todoId: '4cf1c1f2-a5cd-49e9-89a8-6ec87f200001',
+          isCompleted: true,
+          completedAt: '2026-03-22T09:00:00.000Z',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: '투두 없음 또는 타 사용자 투두 접근',
+    schema: {
+      example: {
+        httpCode: 404,
+        message: '투두를 찾을 수 없습니다.',
+        success: false,
+        errorCode: 'TODO_NOT_FOUND',
+      },
+    },
+  })
+  async updateCompletion(
+    @Request() req: { user?: { userId?: string } },
+    @Param('todoId', ParseUUIDPipe) todoId: string,
+  ) {
+    const todo = await this.todoService.updateCompletion(
+      this.getUserId(req),
+      todoId,
+    );
+    return ApiResponseDto.success(
+      todo,
+      TodoResponse.TODO_COMPLETION_UPDATE_SUCCESS.message,
+      TodoResponse.TODO_COMPLETION_UPDATE_SUCCESS.httpCode,
     );
   }
 

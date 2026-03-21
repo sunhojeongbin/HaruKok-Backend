@@ -17,6 +17,11 @@ export interface TodoRepositoryPort {
 
   createAndSave(params: CreateTodoParams): Promise<TodoEntity>;
 
+  toggleCompletionByIdAndUser(
+    todoId: string,
+    usrId: string,
+  ): Promise<TodoEntity | null>;
+
   findByUserAndMonth(
     usrId: string,
     startDate: string,

@@ -27,6 +27,14 @@ export class UnavailableTodoRepository implements TodoRepositoryPort {
     return this.rejectRepositoryNotReady();
   }
 
+  toggleCompletionByIdAndUser(
+    _todoId: string,
+    _usrId: string,
+  ): Promise<TodoEntity | null> {
+    this.consume(_todoId, _usrId);
+    return this.rejectRepositoryNotReady();
+  }
+
   findByUserAndMonth(
     _usrId: string,
     _startDate: string,
