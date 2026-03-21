@@ -37,6 +37,7 @@ import { Request, Response } from 'express';
  * @property accessToken JWT 액세스 토큰
  */
 export class LoginResponseDto {
+  id: string;
   email: string;
   name: string;
   accessToken: string;
@@ -393,6 +394,7 @@ export class AuthController {
 
     return ApiResponseDto.success<LoginResponseDto>(
       {
+        id: result.id,
         email: result.email,
         name: result.name,
         accessToken: result.accessToken,
