@@ -27,6 +27,17 @@ export class TypeOrmTodoRepository implements TodoRepositoryPort {
     return Boolean(category);
   }
 
+  /** @description 투두 ID와 사용자 ID로 활성 투두 단건을 조회 */
+  findByIdAndUser(todoId: string, usrId: string): Promise<TodoEntity | null> {
+    return this.repository.findOne({
+      where: {
+        todoId,
+        usrId,
+        isDeleted: false,
+      },
+    });
+  }
+
   /** @description 투두를 생성하고 같은 날짜 내 정렬 순서를 부여하여 저장 */
   async createAndSave(params: CreateTodoParams): Promise<TodoEntity> {
     return this.repository.manager.transaction(async (manager) => {
@@ -50,6 +61,11 @@ export class TypeOrmTodoRepository implements TodoRepositoryPort {
 
       return manager.save(TodoEntity, todo);
     });
+  }
+
+  /** @description 투두 엔티티 단건을 저장 */
+  save(todo: TodoEntity): Promise<TodoEntity> {
+    return this.repository.save(todo);
   }
 
   /** @description 투두 완료 상태를 원자적으로 토글하고 변경된 투두를 반환 */
@@ -83,6 +99,23 @@ export class TypeOrmTodoRepository implements TodoRepositoryPort {
         },
       });
     });
+  }
+
+  /** @description 투두를 소프트 삭제 */
+  async softDeleteByIdAndUser(todoId: string, usrId: string): Promise<boolean> {
+    const result = await this.repository
+      .createQueryBuilder()
+      .update(TodoEntity)
+      .set({
+        isDeleted: true,
+        deletedAt: () => 'NOW()',
+      })
+      .where('todo_id = :todoId', { todoId })
+      .andWhere('usr_id = :usrId', { usrId })
+      .andWhere('is_deleted = false')
+      .execute();
+
+    return (result.affected ?? 0) > 0;
   }
 
   /** @description 사용자/월 조건으로 투두 목록 조회 */

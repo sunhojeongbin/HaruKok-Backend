@@ -22,8 +22,18 @@ export class UnavailableTodoRepository implements TodoRepositoryPort {
     return this.rejectRepositoryNotReady();
   }
 
+  findByIdAndUser(_todoId: string, _usrId: string): Promise<TodoEntity | null> {
+    this.consume(_todoId, _usrId);
+    return this.rejectRepositoryNotReady();
+  }
+
   createAndSave(_params: CreateTodoParams): Promise<TodoEntity> {
     this.consume(_params);
+    return this.rejectRepositoryNotReady();
+  }
+
+  save(_todo: TodoEntity): Promise<TodoEntity> {
+    this.consume(_todo);
     return this.rejectRepositoryNotReady();
   }
 
@@ -31,6 +41,11 @@ export class UnavailableTodoRepository implements TodoRepositoryPort {
     _todoId: string,
     _usrId: string,
   ): Promise<TodoEntity | null> {
+    this.consume(_todoId, _usrId);
+    return this.rejectRepositoryNotReady();
+  }
+
+  softDeleteByIdAndUser(_todoId: string, _usrId: string): Promise<boolean> {
     this.consume(_todoId, _usrId);
     return this.rejectRepositoryNotReady();
   }
