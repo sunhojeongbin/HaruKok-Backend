@@ -1,11 +1,36 @@
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { ValidationPipe } from '@nestjs/common';
+import { BadRequestException, ValidationPipe } from '@nestjs/common';
+import type { ValidationError } from 'class-validator';
 import { AppModule } from './app.module';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { BusinessException } from './common/exceptions/business.exception';
+import { TodoResponse } from './common/response/todo.response';
+import { SearchTodosQueryDto } from './modules/todo/dtos/search-todos-query.dto';
+
+function flattenValidationErrors(errors: ValidationError[]): ValidationError[] {
+  return errors.flatMap((error) => [
+    error,
+    ...flattenValidationErrors(error.children ?? []),
+  ]);
+}
+
+function collectValidationMessages(errors: ValidationError[]): string[] {
+  return flattenValidationErrors(errors).flatMap((error) =>
+    Object.values(error.constraints ?? {}),
+  );
+}
+
+function hasSearchKeywordValidationError(errors: ValidationError[]): boolean {
+  return flattenValidationErrors(errors).some(
+    (error) =>
+      error.property === 'keyword' &&
+      error.target instanceof SearchTodosQueryDto,
+  );
+}
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -16,6 +41,18 @@ async function bootstrap() {
       whitelist: true, // DTO에 없는 필드 제거
       forbidNonWhitelisted: true, // DTO에 없는 필드가 존재하면 에러 처리
       transform: true, // 요청 데이터를 DTO 타입으로 변환
+      exceptionFactory: (errors: ValidationError[] = []) => {
+        if (hasSearchKeywordValidationError(errors)) {
+          return new BusinessException(
+            TodoResponse.TODO_SEARCH_KEYWORD_INVALID,
+          );
+        }
+
+        const messages = collectValidationMessages(errors);
+        return new BadRequestException(
+          messages.length > 0 ? messages : '입력값 검증에 실패했습니다.',
+        );
+      },
     }),
   );
 
