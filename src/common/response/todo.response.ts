@@ -34,6 +34,11 @@ export const TodoResponse = {
     message: '투두 날짜 형식이 올바르지 않습니다. (YYYY-MM-DD)',
     errorCode: 'TODO_DATE_INVALID',
   },
+  TODO_SEARCH_KEYWORD_INVALID: {
+    httpCode: 400,
+    message: '검색어는 공백이 아닌 1~255자여야 합니다.',
+    errorCode: 'TODO_SEARCH_KEYWORD_INVALID',
+  },
   TODO_UPDATE_PAYLOAD_EMPTY: {
     httpCode: 400,
     message: '수정할 항목(ctgId, content, memo) 중 최소 1개는 필요합니다.',
@@ -80,6 +85,10 @@ export const TodoResponse = {
     httpCode: 200,
     message: '투두 목록 조회에 성공했습니다.',
   },
+  TODO_SEARCH_SUCCESS: {
+    httpCode: 200,
+    message: '투두 검색에 성공했습니다.',
+  },
   TODO_DELETE_SUCCESS: {
     httpCode: 200,
     message: '투두가 삭제되었습니다.',
@@ -105,6 +114,11 @@ export const TodoResponse = {
     httpCode: 500,
     message: '투두 목록 조회 중 오류가 발생했습니다.',
     errorCode: 'TODO_LIST_FAILED',
+  },
+  TODO_SEARCH_FAILED: {
+    httpCode: 500,
+    message: '투두 검색 중 오류가 발생했습니다.',
+    errorCode: 'TODO_SEARCH_FAILED',
   },
   TODO_COMPLETION_UPDATE_FAILED: {
     httpCode: 500,

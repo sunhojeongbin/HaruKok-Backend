@@ -3,7 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Between, EntityManager, Repository } from 'typeorm';
 import { CtgEntity } from '../../ctg/entities/ctg.entity';
 import { TodoEntity } from '../entities/todo.entity';
-import { CreateTodoParams, TodoRepositoryPort } from './todo.repository.port';
+import {
+  CreateTodoParams,
+  SearchTodoRow,
+  TodoRepositoryPort,
+} from './todo.repository.port';
 
 /** @description TypeORM 기반 투두 저장소 */
 @Injectable()
@@ -12,6 +16,11 @@ export class TypeOrmTodoRepository implements TodoRepositoryPort {
     @InjectRepository(TodoEntity)
     private readonly repository: Repository<TodoEntity>,
   ) {}
+
+  /** @description LIKE 검색에서 와일드카드 문자를 이스케이프 */
+  private escapeLikePattern(keyword: string): string {
+    return keyword.replace(/[\\%_]/g, '\\$&');
+  }
 
   /** @description 사용자 소유의 활성 카테고리인지 확인 */
   async isCategoryOwnedByUser(usrId: string, ctgId: string): Promise<boolean> {
@@ -72,7 +81,9 @@ export class TypeOrmTodoRepository implements TodoRepositoryPort {
   }
 
   /** @description 투두 여러 건을 하나의 트랜잭션으로 생성 저장 */
-  async createAndSaveMany(paramsList: CreateTodoParams[]): Promise<TodoEntity[]> {
+  async createAndSaveMany(
+    paramsList: CreateTodoParams[],
+  ): Promise<TodoEntity[]> {
     if (paramsList.length === 0) {
       return [];
     }
@@ -160,5 +171,33 @@ export class TypeOrmTodoRepository implements TodoRepositoryPort {
         createdAt: 'ASC',
       },
     });
+  }
+
+  /** @description 사용자/기간/키워드 조건으로 투두 내용 검색 */
+  searchByUserAndDateRange(
+    usrId: string,
+    keyword: string,
+    startDate: string,
+    endDate: string,
+  ): Promise<SearchTodoRow[]> {
+    const escapedKeyword = this.escapeLikePattern(keyword);
+
+    return this.repository
+      .createQueryBuilder('todo')
+      .select('todo.todo_date', 'todoDate')
+      .addSelect('todo.content', 'content')
+      .where('todo.usr_id = :usrId', { usrId })
+      .andWhere('todo.is_deleted = false')
+      .andWhere('todo.todo_date BETWEEN :startDate AND :endDate', {
+        startDate,
+        endDate,
+      })
+      .andWhere(`todo.content ILIKE :keyword ESCAPE '\\'`, {
+        keyword: `%${escapedKeyword}%`,
+      })
+      .orderBy('todo.todo_date', 'ASC')
+      .addOrderBy('todo.sort_order', 'ASC')
+      .addOrderBy('todo.created_at', 'ASC')
+      .getRawMany<SearchTodoRow>();
   }
 }

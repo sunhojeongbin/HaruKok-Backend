@@ -2,7 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { BusinessException } from '../../../common/exceptions/business.exception';
 import { TodoResponse } from '../../../common/response/todo.response';
 import { TodoEntity } from '../entities/todo.entity';
-import { CreateTodoParams, TodoRepositoryPort } from './todo.repository.port';
+import {
+  CreateTodoParams,
+  SearchTodoRow,
+  TodoRepositoryPort,
+} from './todo.repository.port';
 
 /** @description SKIP_DB 환경에서 사용하는 투두 저장소 */
 @Injectable()
@@ -61,6 +65,16 @@ export class UnavailableTodoRepository implements TodoRepositoryPort {
     _endDate: string,
   ): Promise<TodoEntity[]> {
     this.consume(_usrId, _startDate, _endDate);
+    return this.rejectRepositoryNotReady();
+  }
+
+  searchByUserAndDateRange(
+    _usrId: string,
+    _keyword: string,
+    _startDate: string,
+    _endDate: string,
+  ): Promise<SearchTodoRow[]> {
+    this.consume(_usrId, _keyword, _startDate, _endDate);
     return this.rejectRepositoryNotReady();
   }
 }

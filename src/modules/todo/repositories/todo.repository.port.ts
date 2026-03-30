@@ -11,6 +11,12 @@ export type CreateTodoParams = {
   todoDate: string;
 };
 
+/** @description 투두 검색 결과 행 */
+export type SearchTodoRow = {
+  todoDate: string;
+  content: string;
+};
+
 /** @description 투두 저장소 추상화 */
 export interface TodoRepositoryPort {
   isCategoryOwnedByUser(usrId: string, ctgId: string): Promise<boolean>;
@@ -35,4 +41,11 @@ export interface TodoRepositoryPort {
     startDate: string,
     endDate: string,
   ): Promise<TodoEntity[]>;
+
+  searchByUserAndDateRange(
+    usrId: string,
+    keyword: string,
+    startDate: string,
+    endDate: string,
+  ): Promise<SearchTodoRow[]>;
 }
