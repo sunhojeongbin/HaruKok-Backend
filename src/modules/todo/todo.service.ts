@@ -6,6 +6,7 @@ import { CreateTodoDto } from './dtos/create-todo.dto';
 import { UpdateTodoDto } from './dtos/update-todo.dto';
 import { TodoEntity } from './entities/todo.entity';
 import {
+  SearchTodoRow,
   TODO_REPOSITORY,
   TodoRepositoryPort,
 } from './repositories/todo.repository.port';
@@ -25,6 +26,12 @@ type TodoListItem = {
   updatedAt: Date;
 };
 
+/** @description 투두 검색 응답 데이터 형식 */
+type TodoSearchItem = {
+  todoDate: string;
+  content: string;
+};
+
 /** @description 투두 비즈니스 로직을 처리하는 서비스 */
 @Injectable()
 export class TodoService {
@@ -33,6 +40,7 @@ export class TodoService {
     /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
   private readonly MAX_CONTENT_LENGTH = 255;
   private readonly MAX_MEMO_LENGTH = 1000;
+  private readonly MAX_SEARCH_KEYWORD_LENGTH = 255;
 
   constructor(
     @Inject(TODO_REPOSITORY)
@@ -53,6 +61,14 @@ export class TodoService {
       sortOrder: todo.sortOrder,
       createdAt: todo.createdAt,
       updatedAt: todo.updatedAt,
+    };
+  }
+
+  /** @description 검색 결과 행을 API 응답 객체로 변환 */
+  private toTodoSearchItem(todo: SearchTodoRow): TodoSearchItem {
+    return {
+      todoDate: todo.todoDate,
+      content: todo.content,
     };
   }
 
@@ -92,6 +108,21 @@ export class TodoService {
     return `${nextYear}-${nextMonth}-${nextDay}`;
   }
 
+  /** @description YYYY-MM-DD 날짜에서 월 수를 빼 YYYY-MM-DD로 반환(말일 보정) */
+  private subtractMonths(dateText: string, months: number): string {
+    const [year, month, day] = dateText.split('-').map(Number);
+
+    const targetMonthBase = new Date(Date.UTC(year, month - 1 - months, 1));
+    const targetYear = targetMonthBase.getUTCFullYear();
+    const targetMonth = targetMonthBase.getUTCMonth() + 1;
+    const targetMonthLastDay = new Date(
+      Date.UTC(targetYear, targetMonth, 0),
+    ).getUTCDate();
+    const targetDay = Math.min(day, targetMonthLastDay);
+
+    return `${targetYear}-${String(targetMonth).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}`;
+  }
+
   /** @description 오늘 기준 내일 날짜를 YYYY-MM-DD 형식으로 반환 */
   private getTomorrowDate(): string {
     return this.addDays(this.getTodayDate(), 1);
@@ -125,6 +156,18 @@ export class TodoService {
     }
 
     return normalizedMemo;
+  }
+
+  /** @description 검색 키워드를 정규화하고 검증 */
+  private normalizeSearchKeyword(keyword: string): string {
+    const normalizedKeyword = keyword.trim();
+    if (
+      !normalizedKeyword ||
+      normalizedKeyword.length > this.MAX_SEARCH_KEYWORD_LENGTH
+    ) {
+      throw new BusinessException(TodoResponse.TODO_SEARCH_KEYWORD_INVALID);
+    }
+    return normalizedKeyword;
   }
 
   /** @description 투두 복제 시 사용할 카테고리 유효성(소유/활성)을 검증 */
@@ -178,6 +221,13 @@ export class TodoService {
     };
   }
 
+  /** @description 오늘 기준 직전 3개월 ~ 오늘 기간을 반환 */
+  private resolveSearchRange(): { startDate: string; endDate: string } {
+    const endDate = this.getTodayDate();
+    const startDate = this.subtractMonths(endDate, 3);
+    return { startDate, endDate };
+  }
+
   /**
    * @description 로그인 사용자의 월별 투두 목록 조회
    * @param userId 사용자 ID
@@ -198,6 +248,32 @@ export class TodoService {
         throw error;
       }
       throw new BusinessException(TodoResponse.TODO_LIST_FAILED);
+    }
+  }
+
+  /**
+   * @description 로그인 사용자의 투두를 키워드로 검색
+   * @param userId 사용자 ID
+   * @param keyword 검색 키워드
+   * @returns 오늘 기준 직전 3개월 ~ 오늘 기간 내 검색 결과
+   */
+  async search(userId: string, keyword: string): Promise<TodoSearchItem[]> {
+    const normalizedKeyword = this.normalizeSearchKeyword(keyword);
+    const { startDate, endDate } = this.resolveSearchRange();
+
+    try {
+      const todos = await this.todoRepository.searchByUserAndDateRange(
+        userId,
+        normalizedKeyword,
+        startDate,
+        endDate,
+      );
+      return todos.map((todo) => this.toTodoSearchItem(todo));
+    } catch (error) {
+      if (error instanceof BusinessException) {
+        throw error;
+      }
+      throw new BusinessException(TodoResponse.TODO_SEARCH_FAILED);
     }
   }
 

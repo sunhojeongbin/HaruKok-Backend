@@ -27,6 +27,7 @@ import { TodoResponse } from '../../common/response/todo.response';
 import { CreateTodoDto } from './dtos/create-todo.dto';
 import { ListTodosQueryDto } from './dtos/list-todos-query.dto';
 import { RepeatNextTodoDto } from './dtos/repeat-next-todo.dto';
+import { SearchTodosQueryDto } from './dtos/search-todos-query.dto';
 import { UpdateTodoDto } from './dtos/update-todo.dto';
 import { TodoService } from './todo.service';
 
@@ -501,6 +502,67 @@ export class TodoController {
       deleted,
       TodoResponse.TODO_DELETE_SUCCESS.message,
       TodoResponse.TODO_DELETE_SUCCESS.httpCode,
+    );
+  }
+
+  /** @description 로그인 사용자의 최근 3개월 투두를 키워드로 검색하는 API */
+  @Get('search')
+  @ApiOperation({
+    summary: '투두 검색',
+    description:
+      '투두 내용(content)을 키워드로 검색하여 오늘 기준 직전 3개월부터 오늘까지의 결과를 반환합니다.',
+  })
+  @ApiQuery({
+    name: 'keyword',
+    required: true,
+    description: '검색 키워드',
+    example: '강릉 여행',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '투두 검색 성공',
+    schema: {
+      example: {
+        httpCode: 200,
+        message: '투두 검색에 성공했습니다.',
+        success: true,
+        data: [
+          {
+            todoDate: '2026-01-20',
+            content: '여름 휴가 강릉 여행',
+          },
+          {
+            todoDate: '2026-02-11',
+            content: '강릉 여행 가는 날',
+          },
+        ],
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '검색어 형식 오류',
+    schema: {
+      example: {
+        httpCode: 400,
+        message: '검색어는 공백이 아닌 1~255자여야 합니다.',
+        success: false,
+        errorCode: 'TODO_SEARCH_KEYWORD_INVALID',
+      },
+    },
+  })
+  async search(
+    @Request() req: { user?: { userId?: string } },
+    @Query() query: SearchTodosQueryDto,
+  ) {
+    const todos = await this.todoService.search(
+      this.getUserId(req),
+      query.keyword,
+    );
+    return ApiResponseDto.success(
+      todos,
+      TodoResponse.TODO_SEARCH_SUCCESS.message,
+      TodoResponse.TODO_SEARCH_SUCCESS.httpCode,
     );
   }
 
