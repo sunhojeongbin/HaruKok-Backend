@@ -339,14 +339,19 @@ export class TodoService {
    * @param todoId 복제할 투두 ID
    */
   async repeatToday(userId: string, todoId: string): Promise<TodoListItem> {
-    const sourceTodo = await this.todoRepository.findByIdAndUser(todoId, userId);
+    const sourceTodo = await this.todoRepository.findByIdAndUser(
+      todoId,
+      userId,
+    );
     if (!sourceTodo) {
       throw new BusinessException(TodoResponse.TODO_NOT_FOUND);
     }
 
     const todayDate = this.getTodayDate();
     if (sourceTodo.todoDate === todayDate) {
-      throw new BusinessException(TodoResponse.TODO_REPEAT_TODAY_SOURCE_INVALID);
+      throw new BusinessException(
+        TodoResponse.TODO_REPEAT_TODAY_SOURCE_INVALID,
+      );
     }
 
     const repeatCategoryId = await this.resolveRepeatCategoryId(
@@ -382,7 +387,10 @@ export class TodoService {
    * @param todoId 복제할 투두 ID
    */
   async repeatTomorrow(userId: string, todoId: string): Promise<TodoListItem> {
-    const sourceTodo = await this.todoRepository.findByIdAndUser(todoId, userId);
+    const sourceTodo = await this.todoRepository.findByIdAndUser(
+      todoId,
+      userId,
+    );
     if (!sourceTodo) {
       throw new BusinessException(TodoResponse.TODO_NOT_FOUND);
     }
@@ -432,12 +440,17 @@ export class TodoService {
     todoId: string,
     dates: string[],
   ): Promise<TodoListItem[]> {
-    const sourceTodo = await this.todoRepository.findByIdAndUser(todoId, userId);
+    const sourceTodo = await this.todoRepository.findByIdAndUser(
+      todoId,
+      userId,
+    );
     if (!sourceTodo) {
       throw new BusinessException(TodoResponse.TODO_NOT_FOUND);
     }
 
-    const hasInvalidDate = dates.some((dateText) => !this.isValidDateText(dateText));
+    const hasInvalidDate = dates.some(
+      (dateText) => !this.isValidDateText(dateText),
+    );
     if (hasInvalidDate) {
       throw new BusinessException(TodoResponse.TODO_REPEAT_DATE_INVALID);
     }
@@ -446,7 +459,9 @@ export class TodoService {
       (dateText) => dateText === sourceTodo.todoDate,
     );
     if (hasSameDateAsSource) {
-      throw new BusinessException(TodoResponse.TODO_REPEAT_TARGET_SAME_AS_SOURCE);
+      throw new BusinessException(
+        TodoResponse.TODO_REPEAT_TARGET_SAME_AS_SOURCE,
+      );
     }
 
     const repeatCategoryId = await this.resolveRepeatCategoryId(
@@ -455,17 +470,15 @@ export class TodoService {
     );
 
     try {
-      const repeatedTodos: TodoEntity[] = [];
-      for (const dateText of dates) {
-        const repeatedTodo = await this.todoRepository.createAndSave({
+      const repeatedTodos = await this.todoRepository.createAndSaveMany(
+        dates.map((dateText) => ({
           usrId: userId,
           ctgId: repeatCategoryId,
           content: sourceTodo.content,
           memo: sourceTodo.memo,
           todoDate: dateText,
-        });
-        repeatedTodos.push(repeatedTodo);
-      }
+        })),
+      );
 
       return repeatedTodos.map((todo) => this.toTodoListItem(todo));
     } catch (error) {

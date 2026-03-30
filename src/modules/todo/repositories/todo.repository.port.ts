@@ -19,6 +19,8 @@ export interface TodoRepositoryPort {
 
   createAndSave(params: CreateTodoParams): Promise<TodoEntity>;
 
+  createAndSaveMany(paramsList: CreateTodoParams[]): Promise<TodoEntity[]>;
+
   save(todo: TodoEntity): Promise<TodoEntity>;
 
   toggleCompletionByIdAndUser(

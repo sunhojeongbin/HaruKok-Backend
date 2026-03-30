@@ -32,6 +32,11 @@ export class UnavailableTodoRepository implements TodoRepositoryPort {
     return this.rejectRepositoryNotReady();
   }
 
+  createAndSaveMany(_paramsList: CreateTodoParams[]): Promise<TodoEntity[]> {
+    this.consume(_paramsList);
+    return this.rejectRepositoryNotReady();
+  }
+
   save(_todo: TodoEntity): Promise<TodoEntity> {
     this.consume(_todo);
     return this.rejectRepositoryNotReady();
