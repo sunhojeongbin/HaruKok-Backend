@@ -54,7 +54,7 @@ export class TodoController {
   @ApiOperation({
     summary: '투두 생성',
     description:
-      '로그인 사용자의 투두를 생성합니다. 카테고리와 할 일은 필수, 메모는 선택입니다.',
+      '로그인 사용자의 투두를 생성합니다. 카테고리와 할 일은 필수, 메모와 날짜(todoDate)는 선택입니다. 날짜 미입력 시 오늘 날짜로 생성됩니다.',
   })
   @ApiBody({
     type: CreateTodoDto,
@@ -65,6 +65,15 @@ export class TodoController {
           content: '러닝 5km',
           memo: '아침 7시 한강',
         },
+      },
+      customDate: {
+        value: {
+          ctgId: '11111111-1111-1111-1111-111111111111',
+          content: '도서관 2시간',
+          memo: '자료 대출 포함',
+          todoDate: '2026-04-05',
+        },
+        summary: '원하는 날짜로 투두 생성',
       },
     },
   })
@@ -106,13 +115,13 @@ export class TodoController {
   })
   @ApiResponse({
     status: 400,
-    description: '할 일/메모 길이 검증 실패',
+    description: '할 일/메모 길이 또는 날짜 형식 검증 실패',
     schema: {
       example: {
         httpCode: 400,
-        message: '할 일 내용은 공백이 아닌 1~255자여야 합니다.',
+        message: '투두 날짜 형식이 올바르지 않습니다. (YYYY-MM-DD)',
         success: false,
-        errorCode: 'TODO_CONTENT_INVALID',
+        errorCode: 'TODO_DATE_INVALID',
       },
     },
   })

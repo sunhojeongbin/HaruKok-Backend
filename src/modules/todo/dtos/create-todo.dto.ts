@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   MaxLength,
 } from 'class-validator';
 
@@ -37,4 +38,13 @@ export class CreateTodoDto {
   @IsString()
   @MaxLength(1000)
   memo?: string;
+
+  @ApiPropertyOptional({
+    description:
+      '투두 날짜 (YYYY-MM-DD). 미입력 시 서버 기준 오늘 날짜로 생성됩니다.',
+    example: '2026-04-05',
+  })
+  @IsOptional()
+  @Matches(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/)
+  todoDate?: string;
 }
