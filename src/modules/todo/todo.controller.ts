@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -24,6 +26,8 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { TodoResponse } from '../../common/response/todo.response';
 import { CreateTodoDto } from './dtos/create-todo.dto';
 import { ListTodosQueryDto } from './dtos/list-todos-query.dto';
+import { RepeatNextTodoDto } from './dtos/repeat-next-todo.dto';
+import { UpdateTodoDto } from './dtos/update-todo.dto';
 import { TodoService } from './todo.service';
 
 /** @description 투두 관련 API를 제공하는 컨트롤러 */
@@ -124,6 +128,96 @@ export class TodoController {
     );
   }
 
+  /** @description 로그인 사용자의 투두 수정 API */
+  @Patch(':todoId')
+  @ApiOperation({
+    summary: '투두 수정',
+    description:
+      '카테고리(ctgId), 내용(content), 메모(memo)만 수정할 수 있습니다.',
+  })
+  @ApiBody({
+    type: UpdateTodoDto,
+    examples: {
+      default: {
+        value: {
+          ctgId: '11111111-1111-1111-1111-111111111111',
+          content: '러닝 7km',
+          memo: '저녁 8시 인터벌 포함',
+        },
+      },
+      memoOnly: {
+        value: {
+          memo: '   ',
+        },
+        summary: '메모 삭제(공백 입력 시 null 처리)',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: '투두 수정 성공',
+    schema: {
+      example: {
+        httpCode: 200,
+        message: '투두가 수정되었습니다.',
+        success: true,
+        data: {
+          todoId: '4cf1c1f2-a5cd-49e9-89a8-6ec87f200001',
+          usrId: '00000000-0000-0000-0000-000000000001',
+          ctgId: '11111111-1111-1111-1111-111111111111',
+          content: '러닝 7km',
+          memo: null,
+          todoDate: '2026-03-21',
+          isCompleted: false,
+          completedAt: null,
+          sortOrder: 0,
+          createdAt: '2026-03-21T12:00:00.000Z',
+          updatedAt: '2026-03-22T09:00:00.000Z',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '수정 대상 필드 누락',
+    schema: {
+      example: {
+        httpCode: 400,
+        message: '수정할 항목(ctgId, content, memo) 중 최소 1개는 필요합니다.',
+        success: false,
+        errorCode: 'TODO_UPDATE_PAYLOAD_EMPTY',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: '투두 또는 사용자 소유 카테고리 없음',
+    schema: {
+      example: {
+        httpCode: 404,
+        message: '투두를 찾을 수 없습니다.',
+        success: false,
+        errorCode: 'TODO_NOT_FOUND',
+      },
+    },
+  })
+  async update(
+    @Request() req: { user?: { userId?: string } },
+    @Param('todoId', ParseUUIDPipe) todoId: string,
+    @Body() dto: UpdateTodoDto,
+  ) {
+    const todo = await this.todoService.update(
+      this.getUserId(req),
+      todoId,
+      dto,
+    );
+    return ApiResponseDto.success(
+      todo,
+      TodoResponse.TODO_UPDATE_SUCCESS.message,
+      TodoResponse.TODO_UPDATE_SUCCESS.httpCode,
+    );
+  }
+
   /** @description 로그인 사용자의 투두 완료 상태 변경 API */
   @Patch(':todoId/comp')
   @ApiOperation({
@@ -171,6 +265,233 @@ export class TodoController {
       todo,
       TodoResponse.TODO_COMPLETION_UPDATE_SUCCESS.message,
       TodoResponse.TODO_COMPLETION_UPDATE_SUCCESS.httpCode,
+    );
+  }
+
+  /** @description 로그인 사용자의 기존 투두를 오늘 날짜로 복제하는 API */
+  @Post(':todoId/repeat/today')
+  @ApiOperation({
+    summary: '오늘 또 하기',
+    description: '다른 날짜에 등록된 투두를 오늘 날짜의 새 투두로 추가합니다.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: '오늘 또 하기 성공',
+    schema: {
+      example: {
+        httpCode: 201,
+        message: '오늘 또 하기 투두가 추가되었습니다.',
+        success: true,
+        data: {
+          todoId: '4cf1c1f2-a5cd-49e9-89a8-6ec87f200002',
+          usrId: '00000000-0000-0000-0000-000000000001',
+          ctgId: '11111111-1111-1111-1111-111111111111',
+          content: '러닝 5km',
+          memo: '아침 7시 한강',
+          todoDate: '2026-03-22',
+          isCompleted: false,
+          completedAt: null,
+          sortOrder: 1,
+          createdAt: '2026-03-22T09:00:00.000Z',
+          updatedAt: '2026-03-22T09:00:00.000Z',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '원본 투두 날짜 제약 위반',
+    schema: {
+      example: {
+        httpCode: 400,
+        message: '오늘 또 하기는 오늘이 아닌 날짜의 투두만 가능합니다.',
+        success: false,
+        errorCode: 'TODO_REPEAT_TODAY_SOURCE_INVALID',
+      },
+    },
+  })
+  async repeatToday(
+    @Request() req: { user?: { userId?: string } },
+    @Param('todoId', ParseUUIDPipe) todoId: string,
+  ) {
+    const todo = await this.todoService.repeatToday(
+      this.getUserId(req),
+      todoId,
+    );
+    return ApiResponseDto.success(
+      todo,
+      TodoResponse.TODO_REPEAT_TODAY_SUCCESS.message,
+      TodoResponse.TODO_REPEAT_TODAY_SUCCESS.httpCode,
+    );
+  }
+
+  /** @description 로그인 사용자의 오늘 투두를 내일 날짜로 복제하는 API */
+  @Post(':todoId/repeat/tomorrow')
+  @ApiOperation({
+    summary: '내일 또 하기',
+    description: '오늘 날짜에 등록된 투두를 내일 날짜의 새 투두로 추가합니다.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: '내일 또 하기 성공',
+    schema: {
+      example: {
+        httpCode: 201,
+        message: '내일 또 하기 투두가 추가되었습니다.',
+        success: true,
+        data: {
+          todoId: '4cf1c1f2-a5cd-49e9-89a8-6ec87f200003',
+          usrId: '00000000-0000-0000-0000-000000000001',
+          ctgId: '11111111-1111-1111-1111-111111111111',
+          content: '러닝 5km',
+          memo: '아침 7시 한강',
+          todoDate: '2026-03-23',
+          isCompleted: false,
+          completedAt: null,
+          sortOrder: 0,
+          createdAt: '2026-03-22T09:00:00.000Z',
+          updatedAt: '2026-03-22T09:00:00.000Z',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '원본 투두 날짜 제약 위반',
+    schema: {
+      example: {
+        httpCode: 400,
+        message: '내일 또 하기는 오늘 날짜의 투두만 가능합니다.',
+        success: false,
+        errorCode: 'TODO_REPEAT_TOMORROW_SOURCE_INVALID',
+      },
+    },
+  })
+  async repeatTomorrow(
+    @Request() req: { user?: { userId?: string } },
+    @Param('todoId', ParseUUIDPipe) todoId: string,
+  ) {
+    const todo = await this.todoService.repeatTomorrow(
+      this.getUserId(req),
+      todoId,
+    );
+    return ApiResponseDto.success(
+      todo,
+      TodoResponse.TODO_REPEAT_TOMORROW_SUCCESS.message,
+      TodoResponse.TODO_REPEAT_TOMORROW_SUCCESS.httpCode,
+    );
+  }
+
+  /** @description 로그인 사용자의 투두를 여러 날짜에 복제하는 API */
+  @Post(':todoId/repeat/next')
+  @ApiOperation({
+    summary: '다음에 또 하기',
+    description:
+      '원본 투두를 요청한 날짜 배열(최소 1개)에 각각 새 투두로 추가합니다.',
+  })
+  @ApiBody({
+    type: RepeatNextTodoDto,
+    examples: {
+      default: {
+        value: {
+          dates: ['2026-03-25', '2026-03-30', '2026-04-02'],
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: '다음에 또 하기 성공',
+    schema: {
+      example: {
+        httpCode: 201,
+        message: '다음에 또 하기 투두가 추가되었습니다.',
+        success: true,
+        data: [
+          {
+            todoId: '4cf1c1f2-a5cd-49e9-89a8-6ec87f200004',
+            todoDate: '2026-03-25',
+          },
+          {
+            todoId: '4cf1c1f2-a5cd-49e9-89a8-6ec87f200005',
+            todoDate: '2026-03-30',
+          },
+        ],
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '날짜 형식 오류 또는 원본 날짜 중복 지정',
+    schema: {
+      example: {
+        httpCode: 400,
+        message: '다음에 또 하기는 원본과 다른 날짜만 선택할 수 있습니다.',
+        success: false,
+        errorCode: 'TODO_REPEAT_TARGET_SAME_AS_SOURCE',
+      },
+    },
+  })
+  async repeatNext(
+    @Request() req: { user?: { userId?: string } },
+    @Param('todoId', ParseUUIDPipe) todoId: string,
+    @Body() dto: RepeatNextTodoDto,
+  ) {
+    const todos = await this.todoService.repeatNext(
+      this.getUserId(req),
+      todoId,
+      dto.dates,
+    );
+    return ApiResponseDto.success(
+      todos,
+      TodoResponse.TODO_REPEAT_NEXT_SUCCESS.message,
+      TodoResponse.TODO_REPEAT_NEXT_SUCCESS.httpCode,
+    );
+  }
+
+  /** @description 로그인 사용자의 투두 삭제 API */
+  @Delete(':todoId')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: '투두 삭제',
+    description:
+      '로그인 사용자의 투두를 소프트 삭제합니다. 삭제된 투두는 목록 조회에서 제외됩니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '투두 삭제 성공',
+    schema: {
+      example: {
+        httpCode: 200,
+        message: '투두가 삭제되었습니다.',
+        success: true,
+        data: {
+          todoId: '4cf1c1f2-a5cd-49e9-89a8-6ec87f200001',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: '투두 없음 또는 타 사용자 투두 접근',
+    schema: {
+      example: {
+        httpCode: 404,
+        message: '투두를 찾을 수 없습니다.',
+        success: false,
+        errorCode: 'TODO_NOT_FOUND',
+      },
+    },
+  })
+  async delete(
+    @Request() req: { user?: { userId?: string } },
+    @Param('todoId', ParseUUIDPipe) todoId: string,
+  ) {
+    const deleted = await this.todoService.delete(this.getUserId(req), todoId);
+    return ApiResponseDto.success(
+      deleted,
+      TodoResponse.TODO_DELETE_SUCCESS.message,
+      TodoResponse.TODO_DELETE_SUCCESS.httpCode,
     );
   }
 

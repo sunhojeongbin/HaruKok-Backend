@@ -15,12 +15,20 @@ export type CreateTodoParams = {
 export interface TodoRepositoryPort {
   isCategoryOwnedByUser(usrId: string, ctgId: string): Promise<boolean>;
 
+  findByIdAndUser(todoId: string, usrId: string): Promise<TodoEntity | null>;
+
   createAndSave(params: CreateTodoParams): Promise<TodoEntity>;
+
+  createAndSaveMany(paramsList: CreateTodoParams[]): Promise<TodoEntity[]>;
+
+  save(todo: TodoEntity): Promise<TodoEntity>;
 
   toggleCompletionByIdAndUser(
     todoId: string,
     usrId: string,
   ): Promise<TodoEntity | null>;
+
+  softDeleteByIdAndUser(todoId: string, usrId: string): Promise<boolean>;
 
   findByUserAndMonth(
     usrId: string,
