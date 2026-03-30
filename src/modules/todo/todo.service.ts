@@ -209,6 +209,11 @@ export class TodoService {
   async create(userId: string, dto: CreateTodoDto): Promise<TodoListItem> {
     const content = this.normalizeContent(dto.content);
     const memo = this.normalizeMemo(dto.memo);
+    const todoDate = dto.todoDate ?? this.getTodayDate();
+
+    if (!this.isValidDateText(todoDate)) {
+      throw new BusinessException(TodoResponse.TODO_DATE_INVALID);
+    }
 
     const isOwnedCategory = await this.todoRepository.isCategoryOwnedByUser(
       userId,
@@ -224,7 +229,7 @@ export class TodoService {
         ctgId: dto.ctgId,
         content,
         memo,
-        todoDate: this.getTodayDate(),
+        todoDate,
       });
 
       return this.toTodoListItem(todo);

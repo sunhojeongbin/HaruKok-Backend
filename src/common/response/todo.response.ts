@@ -29,6 +29,11 @@ export const TodoResponse = {
     message: '메모는 최대 1000자까지 입력할 수 있습니다.',
     errorCode: 'TODO_MEMO_INVALID',
   },
+  TODO_DATE_INVALID: {
+    httpCode: 400,
+    message: '투두 날짜 형식이 올바르지 않습니다. (YYYY-MM-DD)',
+    errorCode: 'TODO_DATE_INVALID',
+  },
   TODO_UPDATE_PAYLOAD_EMPTY: {
     httpCode: 400,
     message: '수정할 항목(ctgId, content, memo) 중 최소 1개는 필요합니다.',
