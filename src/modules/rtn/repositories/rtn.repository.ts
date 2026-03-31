@@ -39,6 +39,19 @@ export class TypeOrmRtnRepository implements RtnRepositoryPort {
     params: CreateRoutineParams,
   ): Promise<CreateRoutineResult> {
     return this.repository.manager.transaction(async (manager) => {
+      const rawRoutineSortOrder = await manager
+        .createQueryBuilder(RtnEntity, 'rtn')
+        .select('MAX(rtn.sort_order)', 'maxSortOrder')
+        .where('rtn.usr_id = :usrId', { usrId: params.usrId })
+        .andWhere('rtn.is_deleted = false')
+        .getRawOne<{ maxSortOrder: string | null }>();
+
+      const nextRoutineSortOrder =
+        rawRoutineSortOrder?.maxSortOrder !== null &&
+        rawRoutineSortOrder?.maxSortOrder !== undefined
+          ? Number(rawRoutineSortOrder.maxSortOrder) + 1
+          : 0;
+
       const routine = manager.create(RtnEntity, {
         usrId: params.usrId,
         ctgId: params.ctgId,
@@ -48,6 +61,7 @@ export class TypeOrmRtnRepository implements RtnRepositoryPort {
         startDt: params.startDt,
         endDt: params.endDt,
         alarmTime: params.alarmTime,
+        sortOrder: nextRoutineSortOrder,
       });
 
       const savedRoutine = await manager.save(RtnEntity, routine);
@@ -127,6 +141,7 @@ export class TypeOrmRtnRepository implements RtnRepositoryPort {
         },
         relations: {
           rtnRpts: true,
+          ctg: true,
         },
       });
 
@@ -142,10 +157,10 @@ export class TypeOrmRtnRepository implements RtnRepositoryPort {
     return this.repository
       .createQueryBuilder('rtn')
       .leftJoinAndSelect('rtn.rtnRpts', 'rpt', 'rpt.is_deleted = false')
+      .leftJoinAndSelect('rtn.ctg', 'ctg')
       .where('rtn.usr_id = :usrId', { usrId })
       .andWhere('rtn.is_deleted = false')
-      .orderBy('rtn.start_dt', 'ASC')
-      .addOrderBy('rtn.end_dt', 'ASC')
+      .orderBy('rtn.sort_order', 'ASC')
       .addOrderBy('rtn.created_at', 'ASC')
       .addOrderBy('rpt.day_of_week', 'ASC')
       .addOrderBy('rpt.day_of_mth', 'ASC')
