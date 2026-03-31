@@ -566,6 +566,60 @@ export class TodoController {
     );
   }
 
+  /** @description 로그인 사용자의 투두 상세 조회 API */
+  @Get(':todoId')
+  @ApiOperation({
+    summary: '투두 상세 조회',
+    description: '투두 ID로 로그인 사용자의 투두 상세 정보를 조회합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '투두 상세 조회 성공',
+    schema: {
+      example: {
+        httpCode: 200,
+        message: '투두 상세 조회에 성공했습니다.',
+        success: true,
+        data: {
+          todoId: '4cf1c1f2-a5cd-49e9-89a8-6ec87f200001',
+          usrId: '00000000-0000-0000-0000-000000000001',
+          ctgId: '11111111-1111-1111-1111-111111111111',
+          content: '러닝 5km',
+          memo: '아침 7시 한강',
+          todoDate: '2026-03-21',
+          isCompleted: false,
+          completedAt: null,
+          sortOrder: 0,
+          createdAt: '2026-03-20T12:00:00.000Z',
+          updatedAt: '2026-03-20T12:00:00.000Z',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: '투두 없음 또는 타 사용자 투두 접근',
+    schema: {
+      example: {
+        httpCode: 404,
+        message: '투두를 찾을 수 없습니다.',
+        success: false,
+        errorCode: 'TODO_NOT_FOUND',
+      },
+    },
+  })
+  async getById(
+    @Request() req: { user?: { userId?: string } },
+    @Param('todoId', ParseUUIDPipe) todoId: string,
+  ) {
+    const todo = await this.todoService.getById(this.getUserId(req), todoId);
+    return ApiResponseDto.success(
+      todo,
+      TodoResponse.TODO_GET_SUCCESS.message,
+      TodoResponse.TODO_GET_SUCCESS.httpCode,
+    );
+  }
+
   /** @description 로그인 사용자의 월별 투두 목록 조회 API */
   @Get()
   @ApiOperation({

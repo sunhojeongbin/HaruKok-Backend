@@ -10,6 +10,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { CtgEntity } from '../../ctg/entities/ctg.entity';
+import { RtnEntity } from '../../rtn/entities/rtn.entity';
 import { UsrEntity } from '../../usr/entities/usr.entity';
 
 /**
@@ -21,6 +22,9 @@ import { UsrEntity } from '../../usr/entities/usr.entity';
 })
 @Index('idx_todos_ctg_id', ['ctgId'], {
   where: '"is_deleted" = false AND "ctg_id" IS NOT NULL',
+})
+@Index('idx_todos_rtn_id', ['rtnId'], {
+  where: '"is_deleted" = false AND "rtn_id" IS NOT NULL',
 })
 @Index('idx_todos_usr_date_completed', ['usrId', 'todoDate', 'isCompleted'], {
   where: '"is_deleted" = false',
@@ -51,6 +55,14 @@ export class TodoEntity {
     comment: 'FK - 선택한 카테고리 ID (NULL: 미분류, 카테고리 삭제 시 NULL)',
   })
   ctgId: string | null;
+
+  @Column({
+    name: 'rtn_id',
+    type: 'uuid',
+    nullable: true,
+    comment: 'FK - 연결된 루틴 ID (NULL: 일반 투두)',
+  })
+  rtnId: string | null;
 
   @Column({
     name: 'content',
@@ -138,4 +150,11 @@ export class TodoEntity {
   @ManyToOne(() => CtgEntity, { onDelete: 'SET NULL', onUpdate: 'NO ACTION' })
   @JoinColumn({ name: 'ctg_id', referencedColumnName: 'ctgId' })
   ctg: CtgEntity | null;
+
+  @ManyToOne(() => RtnEntity, (rtn) => rtn.todos, {
+    onDelete: 'SET NULL',
+    onUpdate: 'NO ACTION',
+  })
+  @JoinColumn({ name: 'rtn_id', referencedColumnName: 'rtnId' })
+  rtn: RtnEntity | null;
 }
