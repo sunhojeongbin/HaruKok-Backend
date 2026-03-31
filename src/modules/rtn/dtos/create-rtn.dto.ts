@@ -5,6 +5,7 @@ import {
   IsArray,
   IsEnum,
   IsInt,
+  IsDateString,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -41,14 +42,14 @@ export class CreateRtnDto {
     description: '시작 날짜 (YYYY-MM-DD)',
     example: '2026-04-01',
   })
-  @Matches(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/)
+  @IsDateString()
   startDt: string;
 
   @ApiProperty({
     description: '종료 날짜 (YYYY-MM-DD)',
     example: '2026-06-30',
   })
-  @Matches(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/)
+  @IsDateString()
   endDt: string;
 
   @ApiProperty({
@@ -60,8 +61,7 @@ export class CreateRtnDto {
   rptTypeCd: RptType;
 
   @ApiPropertyOptional({
-    description:
-      '반복 요일 목록 (0:일~6:토, WEEKLY일 때 필수, 하나 이상 선택)',
+    description: '반복 요일 목록 (0:일~6:토, WEEKLY일 때 필수, 하나 이상 선택)',
     example: [1, 3, 5],
     type: [Number],
   })

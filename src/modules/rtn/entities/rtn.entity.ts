@@ -11,6 +11,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { CtgEntity } from '../../ctg/entities/ctg.entity';
+import { TodoEntity } from '../../todo/entities/todo.entity';
 import { UsrEntity } from '../../usr/entities/usr.entity';
 import { RptType } from '../enums/rpt-type.enum';
 import { RtnRptEntity } from './rtn-rpt.entity';
@@ -128,4 +129,7 @@ export class RtnEntity {
 
   @OneToMany(() => RtnRptEntity, (rtnRpt) => rtnRpt.rtn)
   rtnRpts: RtnRptEntity[];
+
+  @OneToMany(() => TodoEntity, (todo) => todo.rtn)
+  todos: TodoEntity[];
 }

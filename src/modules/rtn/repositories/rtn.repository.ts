@@ -110,6 +110,7 @@ export class TypeOrmRtnRepository implements RtnRepositoryPort {
         const todo = manager.create(TodoEntity, {
           usrId: params.usrId,
           ctgId: params.ctgId,
+          rtnId: savedRoutine.rtnId,
           content: params.rtnContent,
           memo: null,
           todoDate,
