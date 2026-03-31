@@ -23,12 +23,14 @@ type RoutineListItem = {
   rtnId: string;
   usrId: string;
   ctgId: string;
+  ctgColorCode: string | null;
   rtnContent: string;
   rtnDesc: string | null;
   rptTypeCd: RptType;
   startDt: string;
   endDt: string;
   alarmTime: string | null;
+  sortOrder: number;
   createdAt: Date;
   updatedAt: Date;
   repeats: RoutineRepeatItem[];
@@ -57,12 +59,14 @@ export class RtnService {
       rtnId: rtn.rtnId,
       usrId: rtn.usrId,
       ctgId: rtn.ctgId,
+      ctgColorCode: rtn.ctg?.colorCode ?? null,
       rtnContent: rtn.rtnContent,
       rtnDesc: rtn.rtnDesc,
       rptTypeCd: rtn.rptTypeCd,
       startDt: rtn.startDt,
       endDt: rtn.endDt,
       alarmTime: rtn.alarmTime,
+      sortOrder: rtn.sortOrder,
       createdAt: rtn.createdAt,
       updatedAt: rtn.updatedAt,
       repeats: (rtn.rtnRpts ?? []).map((repeat) => ({

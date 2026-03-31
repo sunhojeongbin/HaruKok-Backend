@@ -97,12 +97,14 @@ export class RtnController {
           rtnId: '70ff2f32-2dcd-4a59-8a66-c13e4f500001',
           usrId: '00000000-0000-0000-0000-000000000001',
           ctgId: '11111111-1111-1111-1111-111111111111',
+          ctgColorCode: '#FF5733',
           rtnContent: '헬스장 가기',
           rtnDesc: null,
           rptTypeCd: 'WEEKLY',
           startDt: '2026-04-01',
           endDt: '2026-06-30',
           alarmTime: '18:00:00',
+          sortOrder: 0,
           createdAt: '2026-03-31T09:00:00.000Z',
           updatedAt: '2026-03-31T09:00:00.000Z',
           repeats: [
@@ -165,7 +167,7 @@ export class RtnController {
   @ApiOperation({
     summary: '루틴 목록 조회',
     description:
-      '로그인 사용자의 삭제되지 않은 루틴 목록을 반복 설정과 함께 조회합니다.',
+      '로그인 사용자의 삭제되지 않은 루틴 목록을 반복 설정 및 카테고리 색상과 함께 조회합니다.',
   })
   @ApiResponse({
     status: 200,
@@ -180,12 +182,14 @@ export class RtnController {
             rtnId: '70ff2f32-2dcd-4a59-8a66-c13e4f500001',
             usrId: '00000000-0000-0000-0000-000000000001',
             ctgId: '11111111-1111-1111-1111-111111111111',
+            ctgColorCode: '#FF5733',
             rtnContent: '아침 스트레칭',
             rtnDesc: '기상 후 10분',
             rptTypeCd: 'WEEKLY',
             startDt: '2026-04-01',
             endDt: '2026-06-30',
             alarmTime: '07:00:00',
+            sortOrder: 0,
             createdAt: '2026-03-31T09:00:00.000Z',
             updatedAt: '2026-03-31T09:00:00.000Z',
             repeats: [

@@ -24,6 +24,9 @@ import { RtnRptEntity } from './rtn-rpt.entity';
 @Index('idx_rtn_02', ['usrId', 'startDt', 'endDt'], {
   where: '"is_deleted" = false',
 })
+@Index('idx_rtn_03', ['usrId', 'sortOrder'], {
+  where: '"is_deleted" = false',
+})
 @Check('chk_rtn_rpt_type', `"rpt_type_cd" IN ('DAILY', 'WEEKLY', 'MONTHLY')`)
 @Check('chk_rtn_dt_range', '"end_dt" >= "start_dt"')
 @Check('chk_rtn_nm', `btrim("rtn_nm") <> ''`)
@@ -94,6 +97,14 @@ export class RtnEntity {
     comment: '알림 시간(NULL: 알림 없음)',
   })
   alarmTime: string | null;
+
+  @Column({
+    name: 'sort_order',
+    type: 'smallint',
+    default: 0,
+    comment: '루틴 정렬 순서',
+  })
+  sortOrder: number;
 
   @Column({
     name: 'is_deleted',
