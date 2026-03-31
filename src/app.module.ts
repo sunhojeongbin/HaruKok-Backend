@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './modules/auth/auth.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CtgModule } from './modules/ctg/ctg.module';
+import { RtnModule } from './modules/rtn/rtn.module';
 import { TodoModule } from './modules/todo/todo.module';
 
 const databaseImports =
@@ -39,6 +40,7 @@ const databaseImports =
     }),
     AuthModule,
     CtgModule,
+    RtnModule,
     TodoModule,
     ...databaseImports,
   ],

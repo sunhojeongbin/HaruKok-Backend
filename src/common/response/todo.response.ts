@@ -81,6 +81,10 @@ export const TodoResponse = {
     httpCode: 200,
     message: '투두가 수정되었습니다.',
   },
+  TODO_GET_SUCCESS: {
+    httpCode: 200,
+    message: '투두 상세 조회에 성공했습니다.',
+  },
   TODO_LIST_SUCCESS: {
     httpCode: 200,
     message: '투두 목록 조회에 성공했습니다.',
@@ -129,6 +133,11 @@ export const TodoResponse = {
     httpCode: 500,
     message: '투두 수정 중 오류가 발생했습니다.',
     errorCode: 'TODO_UPDATE_FAILED',
+  },
+  TODO_GET_FAILED: {
+    httpCode: 500,
+    message: '투두 상세 조회 중 오류가 발생했습니다.',
+    errorCode: 'TODO_GET_FAILED',
   },
   TODO_DELETE_FAILED: {
     httpCode: 500,

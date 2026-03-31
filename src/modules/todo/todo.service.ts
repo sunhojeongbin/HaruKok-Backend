@@ -252,6 +252,26 @@ export class TodoService {
   }
 
   /**
+   * @description 로그인 사용자의 투두 상세 조회
+   * @param userId 사용자 ID
+   * @param todoId 조회할 투두 ID
+   */
+  async getById(userId: string, todoId: string): Promise<TodoListItem> {
+    try {
+      const todo = await this.todoRepository.findByIdAndUser(todoId, userId);
+      if (!todo) {
+        throw new BusinessException(TodoResponse.TODO_NOT_FOUND);
+      }
+      return this.toTodoListItem(todo);
+    } catch (error) {
+      if (error instanceof BusinessException) {
+        throw error;
+      }
+      throw new BusinessException(TodoResponse.TODO_GET_FAILED);
+    }
+  }
+
+  /**
    * @description 로그인 사용자의 투두를 키워드로 검색
    * @param userId 사용자 ID
    * @param keyword 검색 키워드
