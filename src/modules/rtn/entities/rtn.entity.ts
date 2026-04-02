@@ -60,15 +60,6 @@ export class RtnEntity {
   rtnContent: string;
 
   @Column({
-    name: 'rtn_desc',
-    type: 'varchar',
-    length: 500,
-    nullable: true,
-    comment: '루틴 설명',
-  })
-  rtnDesc: string | null;
-
-  @Column({
     name: 'rpt_type_cd',
     type: 'varchar',
     length: 10,

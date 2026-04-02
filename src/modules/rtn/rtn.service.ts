@@ -23,9 +23,7 @@ type RoutineListItem = {
   rtnId: string;
   usrId: string;
   ctgId: string;
-  ctgColorCode: string | null;
   rtnContent: string;
-  rtnDesc: string | null;
   rptTypeCd: RptType;
   startDt: string;
   endDt: string;
@@ -37,7 +35,12 @@ type RoutineListItem = {
 };
 
 /** @description 루틴 생성 응답 데이터 형식 */
-type RoutineCreateResult = RoutineListItem & {
+type RoutineCreateItem = RoutineListItem & {
+  ctgColorCode: string | null;
+};
+
+/** @description 루틴 생성 응답 데이터 형식 */
+type RoutineCreateResult = RoutineCreateItem & {
   createdTodoCount: number;
 };
 
@@ -53,15 +56,13 @@ export class RtnService {
     private readonly rtnRepository: RtnRepositoryPort,
   ) {}
 
-  /** @description 루틴 엔티티를 API 응답 객체로 변환 */
+  /** @description 루틴 엔티티를 루틴 목록 API 응답 객체로 변환 */
   private toRoutineListItem(rtn: RtnEntity): RoutineListItem {
     return {
       rtnId: rtn.rtnId,
       usrId: rtn.usrId,
       ctgId: rtn.ctgId,
-      ctgColorCode: rtn.ctg?.colorCode ?? null,
       rtnContent: rtn.rtnContent,
-      rtnDesc: rtn.rtnDesc,
       rptTypeCd: rtn.rptTypeCd,
       startDt: rtn.startDt,
       endDt: rtn.endDt,
@@ -75,6 +76,14 @@ export class RtnService {
         dayOfWeek: repeat.dayOfWeek,
         dayOfMth: repeat.dayOfMth,
       })),
+    };
+  }
+
+  /** @description 루틴 엔티티를 루틴 생성 API 응답 객체로 변환 */
+  private toRoutineCreateItem(rtn: RtnEntity): RoutineCreateItem {
+    return {
+      ...this.toRoutineListItem(rtn),
+      ctgColorCode: rtn.ctg?.colorCode ?? null,
     };
   }
 
@@ -254,7 +263,7 @@ export class RtnService {
       });
 
       return {
-        ...this.toRoutineListItem(created.rtn),
+        ...this.toRoutineCreateItem(created.rtn),
         createdTodoCount: created.createdTodoCount,
       };
     } catch (error) {
