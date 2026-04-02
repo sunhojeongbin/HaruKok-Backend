@@ -56,7 +56,6 @@ export class TypeOrmRtnRepository implements RtnRepositoryPort {
         usrId: params.usrId,
         ctgId: params.ctgId,
         rtnContent: params.rtnContent,
-        rtnDesc: null,
         rptTypeCd: params.rptTypeCd,
         startDt: params.startDt,
         endDt: params.endDt,
@@ -157,7 +156,6 @@ export class TypeOrmRtnRepository implements RtnRepositoryPort {
     return this.repository
       .createQueryBuilder('rtn')
       .leftJoinAndSelect('rtn.rtnRpts', 'rpt', 'rpt.is_deleted = false')
-      .leftJoinAndSelect('rtn.ctg', 'ctg')
       .where('rtn.usr_id = :usrId', { usrId })
       .andWhere('rtn.is_deleted = false')
       .orderBy('rtn.sort_order', 'ASC')
