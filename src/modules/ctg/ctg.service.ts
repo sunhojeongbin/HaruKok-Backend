@@ -186,7 +186,7 @@ export class CtgService {
   }
 
   /**
-   * @description 카테고리를 소프트 삭제하고 남은 카테고리 순서를 재정렬하는 메소드
+   * @description 카테고리와 연관 데이터(루틴/반복설정/투두)를 소프트 삭제하고 남은 카테고리 순서를 재정렬하는 메소드
    * @param userId 사용자 ID
    * @param ctgId 삭제할 카테고리 ID
    * @returns 삭제된 카테고리 ID

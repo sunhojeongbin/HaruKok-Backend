@@ -86,6 +86,57 @@ async function bootstrap() {
   SwaggerModule.setup('api', app, document, {
     swaggerOptions: {
       persistAuthorization: true,
+      onComplete: () => {
+        try {
+          const swaggerWindow = window as Window & {
+            ui?: {
+              preauthorizeApiKey?: (name: string, value: string) => void;
+              getSystem?: () => {
+                authActions?: {
+                  logout?: (...args: unknown[]) => unknown;
+                };
+              };
+            };
+            __harukokSwaggerLogoutPatched?: boolean;
+          };
+          const persistedAccessToken = localStorage.getItem(
+            'HARUKOK_SWAGGER_ACCESS_TOKEN',
+          );
+          const preauthorizeApiKey = swaggerWindow.ui?.preauthorizeApiKey;
+          if (
+            persistedAccessToken &&
+            typeof preauthorizeApiKey === 'function'
+          ) {
+            preauthorizeApiKey('bearer', persistedAccessToken);
+            preauthorizeApiKey('Bearer', persistedAccessToken);
+          }
+
+          if (!swaggerWindow.__harukokSwaggerLogoutPatched) {
+            const authActions = swaggerWindow.ui
+              ?.getSystem?.()
+              .authActions as
+              | {
+                  logout?: (...args: unknown[]) => unknown;
+                }
+              | undefined;
+
+            const originalLogout = authActions?.logout;
+            if (typeof originalLogout === 'function') {
+              authActions.logout = (...args: unknown[]) => {
+                try {
+                  localStorage.removeItem('HARUKOK_SWAGGER_ACCESS_TOKEN');
+                } catch {
+                  // localStorage 접근 실패는 무시
+                }
+                return originalLogout(...args);
+              };
+              swaggerWindow.__harukokSwaggerLogoutPatched = true;
+            }
+          }
+        } catch {
+          // Swagger 초기화 과정의 부가 처리 실패는 무시
+        }
+      },
       responseInterceptor: (response: {
         status?: number;
         url?: string;
@@ -94,6 +145,51 @@ async function bootstrap() {
         text?: string;
       }) => {
         try {
+          const swaggerWindow = window as Window & {
+            ui?: {
+              preauthorizeApiKey?: (name: string, value: string) => void;
+              getSystem?: () => {
+                authActions?: {
+                  logout?: (...args: unknown[]) => unknown;
+                };
+              };
+            };
+          };
+          const isSuccessResponse =
+            !!response.status &&
+            response.status >= 200 &&
+            response.status < 300;
+          const isLogoutResponse = response.url?.includes('/auth/logout');
+          if (isLogoutResponse && isSuccessResponse) {
+            try {
+              localStorage.removeItem('HARUKOK_SWAGGER_ACCESS_TOKEN');
+            } catch {
+              // localStorage 접근 실패는 무시
+            }
+
+            const authActions = swaggerWindow.ui
+              ?.getSystem?.()
+              .authActions as
+              | {
+                  logout?: (...args: unknown[]) => unknown;
+                }
+              | undefined;
+            if (typeof authActions?.logout === 'function') {
+              try {
+                authActions.logout({ bearer: {} });
+              } catch {
+                // 보안 스키마 키 불일치 가능성을 고려해 무시
+              }
+              try {
+                authActions.logout({ Bearer: {} });
+              } catch {
+                // 보안 스키마 키 불일치 가능성을 고려해 무시
+              }
+            }
+
+            return response;
+          }
+
           const isAuthTokenResponse =
             response.url?.includes('/auth/login') ||
             response.url?.includes('/auth/refresh');
@@ -101,11 +197,7 @@ async function bootstrap() {
             return response;
           }
 
-          if (
-            !response.status ||
-            response.status < 200 ||
-            response.status >= 300
-          ) {
+          if (!isSuccessResponse) {
             return response;
           }
 
@@ -130,11 +222,15 @@ async function bootstrap() {
 
           const accessToken = payload?.data?.accessToken;
           if (accessToken) {
-            const swaggerWindow = window as Window & {
-              ui?: {
-                preauthorizeApiKey?: (name: string, value: string) => void;
-              };
-            };
+            try {
+              localStorage.setItem(
+                'HARUKOK_SWAGGER_ACCESS_TOKEN',
+                accessToken,
+              );
+            } catch {
+              // localStorage 접근 실패는 무시
+            }
+
             const preauthorizeApiKey = swaggerWindow.ui?.preauthorizeApiKey;
             if (typeof preauthorizeApiKey === 'function') {
               preauthorizeApiKey('bearer', accessToken);

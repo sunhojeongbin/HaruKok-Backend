@@ -355,7 +355,7 @@ export class CtgController {
   @ApiOperation({
     summary: '카테고리 삭제',
     description:
-      '카테고리를 삭제하고, 남은 카테고리의 `sortOrder`를 0부터 다시 정렬합니다.',
+      '카테고리를 삭제하고, 해당 카테고리와 연관된 루틴/투두/반복설정을 함께 삭제한 뒤 남은 카테고리의 `sortOrder`를 0부터 다시 정렬합니다.',
   })
   @ApiResponse({
     status: 200,

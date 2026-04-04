@@ -31,6 +31,7 @@ export class TypeOrmTodoRepository implements TodoRepositoryPort {
           ctgId,
           usrId,
           isDeleted: false,
+          isEnded: false,
         },
       });
     return Boolean(category);

@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { RtnEntity } from '../../rtn/entities/rtn.entity';
+import { RtnRptEntity } from '../../rtn/entities/rtn-rpt.entity';
+import { TodoEntity } from '../../todo/entities/todo.entity';
 import { CtgEntity } from '../entities/ctg.entity';
 import { UsrEntity } from '../../usr/entities/usr.entity';
 import {
@@ -104,12 +107,66 @@ export class TypeOrmCtgRepository implements CtgRepositoryPort {
     return this.repository.save(categories);
   }
 
-  /** @description 카테고리 소프트 삭제와 잔여 카테고리 재정렬을 트랜잭션으로 처리 */
+  /** @description 카테고리 및 연관 데이터 소프트 삭제와 잔여 카테고리 재정렬을 트랜잭션으로 처리 */
   async softDeleteAndReindex(
     category: CtgEntity,
     usrId: string,
   ): Promise<void> {
     await this.repository.manager.transaction(async (manager) => {
+      const rawRoutines = await manager
+        .createQueryBuilder(RtnEntity, 'rtn')
+        .select('rtn.rtn_id', 'rtnId')
+        .where('rtn.usr_id = :usrId', { usrId })
+        .andWhere('rtn.ctg_id = :ctgId', { ctgId: category.ctgId })
+        .andWhere('rtn.is_deleted = false')
+        .getRawMany<{ rtnId: string }>();
+      const routineIds = rawRoutines.map((row) => row.rtnId);
+
+      if (routineIds.length > 0) {
+        await manager
+          .createQueryBuilder()
+          .update(RtnRptEntity)
+          .set({ isDeleted: true })
+          .where('rtn_id IN (:...routineIds)', { routineIds })
+          .andWhere('is_deleted = false')
+          .execute();
+
+        await manager
+          .createQueryBuilder()
+          .update(RtnEntity)
+          .set({ isDeleted: true })
+          .where('usr_id = :usrId', { usrId })
+          .andWhere('ctg_id = :ctgId', { ctgId: category.ctgId })
+          .andWhere('is_deleted = false')
+          .execute();
+      }
+
+      await manager
+        .createQueryBuilder()
+        .update(TodoEntity)
+        .set({
+          isDeleted: true,
+          deletedAt: () => 'NOW()',
+        })
+        .where('usr_id = :usrId', { usrId })
+        .andWhere('ctg_id = :ctgId', { ctgId: category.ctgId })
+        .andWhere('is_deleted = false')
+        .execute();
+
+      if (routineIds.length > 0) {
+        await manager
+          .createQueryBuilder()
+          .update(TodoEntity)
+          .set({
+            isDeleted: true,
+            deletedAt: () => 'NOW()',
+          })
+          .where('usr_id = :usrId', { usrId })
+          .andWhere('rtn_id IN (:...routineIds)', { routineIds })
+          .andWhere('is_deleted = false')
+          .execute();
+      }
+
       await manager.save(CtgEntity, category);
 
       const restCategories = await manager.find(CtgEntity, {
