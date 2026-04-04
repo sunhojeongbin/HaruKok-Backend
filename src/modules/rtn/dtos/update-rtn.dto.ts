@@ -1,12 +1,11 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   ArrayMinSize,
   ArrayUnique,
   IsArray,
+  IsDateString,
   IsEnum,
   IsInt,
-  IsDateString,
-  IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
@@ -18,50 +17,54 @@ import {
 import { RptType } from '../enums/rpt-type.enum';
 
 /**
- * @description 루틴 생성 요청 DTO
+ * @description 루틴 수정 요청 DTO
  */
-export class CreateRtnDto {
-  @ApiProperty({
-    description: '카테고리 ID',
+export class UpdateRtnDto {
+  @ApiPropertyOptional({
+    description: '수정할 카테고리 ID',
     example: '11111111-1111-1111-1111-111111111111',
   })
+  @IsOptional()
   @IsUUID('4')
-  ctgId: string;
+  ctgId?: string;
 
-  @ApiProperty({
-    description: '루틴 내용',
-    example: '아침 스트레칭 10분',
+  @ApiPropertyOptional({
+    description: '수정할 루틴 내용',
+    example: '아침 스트레칭 20분',
     maxLength: 100,
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
   @MaxLength(100)
-  rtnContent: string;
+  rtnContent?: string;
 
-  @ApiProperty({
-    description: '시작 날짜 (YYYY-MM-DD)',
+  @ApiPropertyOptional({
+    description: '수정할 시작 날짜 (YYYY-MM-DD)',
     example: '2026-04-01',
   })
+  @IsOptional()
   @IsDateString()
-  startDt: string;
+  startDt?: string;
 
-  @ApiProperty({
-    description: '종료 날짜 (YYYY-MM-DD)',
+  @ApiPropertyOptional({
+    description: '수정할 종료 날짜 (YYYY-MM-DD)',
     example: '2026-06-30',
   })
+  @IsOptional()
   @IsDateString()
-  endDt: string;
+  endDt?: string;
 
-  @ApiProperty({
-    description: '반복 주기',
+  @ApiPropertyOptional({
+    description: '수정할 반복 주기',
     enum: RptType,
     example: RptType.WEEKLY,
   })
+  @IsOptional()
   @IsEnum(RptType)
-  rptTypeCd: RptType;
+  rptTypeCd?: RptType;
 
   @ApiPropertyOptional({
-    description: '반복 요일 목록 (0:일~6:토, WEEKLY일 때 필수, 하나 이상 선택)',
+    description: '수정할 반복 요일 목록 (0:일~6:토)',
     example: [1, 3, 5],
     type: [Number],
   })
@@ -75,8 +78,7 @@ export class CreateRtnDto {
   dayOfWeeks?: number[];
 
   @ApiPropertyOptional({
-    description:
-      '반복 일자 목록 (1~31, MONTHLY일 때 필수, 여러 일자 선택 가능)',
+    description: '수정할 반복 일자 목록 (1~31)',
     example: [1, 15, 31],
     type: [Number],
   })
@@ -90,7 +92,7 @@ export class CreateRtnDto {
   dayOfMths?: number[];
 
   @ApiPropertyOptional({
-    description: '알림 시간 (HH:mm)',
+    description: '수정할 알림 시간 (HH:mm)',
     example: '07:30',
   })
   @IsOptional()
