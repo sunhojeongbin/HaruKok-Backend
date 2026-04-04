@@ -324,6 +324,7 @@ export class TypeOrmRtnRepository implements RtnRepositoryPort {
       if (!routine) {
         throw new Error('ROUTINE_NOT_FOUND');
       }
+      const previousCtgId = routine.ctgId;
 
       routine.ctgId = params.ctgId;
       routine.rtnContent = params.rtnContent;
@@ -331,6 +332,22 @@ export class TypeOrmRtnRepository implements RtnRepositoryPort {
       routine.startDt = params.startDt;
       routine.endDt = params.endDt;
       routine.alarmTime = params.alarmTime;
+
+      if (previousCtgId !== params.ctgId) {
+        const rawRoutineSortOrder = await manager
+          .createQueryBuilder(RtnEntity, 'rtn')
+          .select('MAX(rtn.sort_order)', 'maxSortOrder')
+          .where('rtn.usr_id = :usrId', { usrId: params.usrId })
+          .andWhere('rtn.ctg_id = :ctgId', { ctgId: params.ctgId })
+          .andWhere('rtn.is_deleted = false')
+          .getRawOne<{ maxSortOrder: string | null }>();
+
+        routine.sortOrder =
+          rawRoutineSortOrder?.maxSortOrder !== null &&
+          rawRoutineSortOrder?.maxSortOrder !== undefined
+            ? Number(rawRoutineSortOrder.maxSortOrder) + 1
+            : 0;
+      }
 
       await manager.save(RtnEntity, routine);
 
@@ -352,16 +369,14 @@ export class TypeOrmRtnRepository implements RtnRepositoryPort {
         params.todoDatesFromToday,
       );
 
-      const updatedRoutine = await manager.findOne(RtnEntity, {
-        where: {
-          rtnId: params.rtnId,
-          usrId: params.usrId,
-          isDeleted: false,
-        },
-        relations: {
-          rtnRpts: true,
-        },
-      });
+      const updatedRoutine = await manager
+        .createQueryBuilder(RtnEntity, 'rtn')
+        .leftJoinAndSelect('rtn.rtnRpts', 'rpt', 'rpt.is_deleted = false')
+        .where('rtn.rtn_id = :rtnId', { rtnId: routine.rtnId })
+        .andWhere('rtn.is_deleted = false')
+        .orderBy('rpt.day_of_week', 'ASC')
+        .addOrderBy('rpt.day_of_mth', 'ASC')
+        .getOne();
 
       if (!updatedRoutine) {
         throw new Error('ROUTINE_NOT_FOUND');
