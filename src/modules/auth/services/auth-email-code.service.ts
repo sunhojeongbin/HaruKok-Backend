@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { emailCodeHash } from '../../../common/crypto/hash.util';
 import { BusinessException } from '../../../common/exceptions/business.exception';
-import { AuthResponse } from '../../../common/response/auth.response';
 import { MailService } from '../../mail/mail.service';
+import { AuthErrorCode } from '../errors/auth-error-code';
 
 /** @description 이메일 인증 코드 저장 */
 type EmailVerificationCodeEntry = {
@@ -33,7 +33,7 @@ export class AuthEmailCodeService {
   private getEmailCodeSecret(): string {
     const secret = process.env.EMAIL_CODE_SECRET ?? process.env.JWT_SECRET;
     if (!secret) {
-      throw new BusinessException(AuthResponse.AUTH_CONFIG_INVALID);
+      throw new BusinessException(AuthErrorCode.AUTH_CONFIG_INVALID);
     }
     return secret;
   }
@@ -45,7 +45,7 @@ export class AuthEmailCodeService {
     try {
       await this.mailService.sendEmailVerificationCode(normalizedEmail, code);
     } catch {
-      throw new BusinessException(AuthResponse.EMAIL_SEND_FAILED);
+      throw new BusinessException(AuthErrorCode.EMAIL_SEND_FAILED);
     }
 
     this.emailCodeStore.set(normalizedEmail, {
@@ -58,19 +58,19 @@ export class AuthEmailCodeService {
   /** @description 이메일 인증 코드를 검증한다. */
   verifyCode(normalizedEmail: string, code: string): void {
     if (!code || code.length !== 6) {
-      throw new BusinessException(AuthResponse.EMAIL_CODE_FORMAT_INVALID);
+      throw new BusinessException(AuthErrorCode.EMAIL_CODE_FORMAT_INVALID);
     }
 
     const storedCode = this.emailCodeStore.get(normalizedEmail);
 
     if (!storedCode || storedCode.expiresAt < Date.now()) {
       this.emailCodeStore.delete(normalizedEmail);
-      throw new BusinessException(AuthResponse.EMAIL_CODE_EXPIRED_OR_NOT_FOUND);
+      throw new BusinessException(AuthErrorCode.EMAIL_CODE_EXPIRED_OR_NOT_FOUND);
     }
 
     if (storedCode.attempts >= this.MAX_VERIFY_ATTEMPTS) {
       this.emailCodeStore.delete(normalizedEmail);
-      throw new BusinessException(AuthResponse.EMAIL_CODE_ATTEMPTS_EXCEEDED);
+      throw new BusinessException(AuthErrorCode.EMAIL_CODE_ATTEMPTS_EXCEEDED);
     }
 
     const incomingCodeHash = emailCodeHash(
@@ -87,7 +87,7 @@ export class AuthEmailCodeService {
     if (!isValidCode) {
       storedCode.attempts += 1;
       this.emailCodeStore.set(normalizedEmail, storedCode);
-      throw new BusinessException(AuthResponse.EMAIL_CODE_INVALID);
+      throw new BusinessException(AuthErrorCode.EMAIL_CODE_INVALID);
     }
 
     this.emailCodeStore.delete(normalizedEmail);

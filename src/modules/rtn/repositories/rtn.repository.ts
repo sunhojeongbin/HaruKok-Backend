@@ -3,6 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, MoreThanOrEqual, Repository } from 'typeorm';
 import { CtgEntity } from '../../ctg/entities/ctg.entity';
 import { TodoEntity } from '../../todo/entities/todo.entity';
+import {
+  buildRepeatSeeds,
+  normalizeRepeatOptions,
+} from '../domain/routine-repeat.policy';
 import { RptType } from '../enums/rpt-type.enum';
 import { RtnRptEntity } from '../entities/rtn-rpt.entity';
 import { RtnEntity } from '../entities/rtn.entity';
@@ -211,39 +215,19 @@ export class TypeOrmRtnRepository implements RtnRepositoryPort {
       .andWhere('is_deleted = false')
       .execute();
 
-    const repeats: RtnRptEntity[] = [];
-    if (rptTypeCd === RptType.DAILY) {
-      repeats.push(
+    const normalizedRepeatOptions = normalizeRepeatOptions(
+      dayOfWeeks,
+      dayOfMths,
+    );
+    const repeats = buildRepeatSeeds(rptTypeCd, normalizedRepeatOptions).map(
+      (seed) =>
         manager.create(RtnRptEntity, {
           rtnId,
-          rptTypeCd: RptType.DAILY,
-          dayOfWeek: null,
-          dayOfMth: null,
+          rptTypeCd: seed.rptTypeCd,
+          dayOfWeek: seed.dayOfWeek,
+          dayOfMth: seed.dayOfMth,
         }),
-      );
-    } else if (rptTypeCd === RptType.WEEKLY) {
-      for (const dayOfWeek of dayOfWeeks) {
-        repeats.push(
-          manager.create(RtnRptEntity, {
-            rtnId,
-            rptTypeCd: RptType.WEEKLY,
-            dayOfWeek,
-            dayOfMth: null,
-          }),
-        );
-      }
-    } else {
-      for (const dayOfMth of dayOfMths) {
-        repeats.push(
-          manager.create(RtnRptEntity, {
-            rtnId,
-            rptTypeCd: RptType.MONTHLY,
-            dayOfWeek: null,
-            dayOfMth,
-          }),
-        );
-      }
-    }
+    );
 
     await manager.save(RtnRptEntity, repeats);
   }
@@ -315,14 +299,16 @@ export class TypeOrmRtnRepository implements RtnRepositoryPort {
   }
 
   /** @description 오늘 이후 루틴 설정을 수정하고 오늘 이후 투두를 diff 동기화 */
-  async updateFromToday(params: UpdateRoutineParams): Promise<RtnEntity> {
+  async updateFromToday(
+    params: UpdateRoutineParams,
+  ): Promise<RtnEntity | null> {
     return this.repository.manager.transaction(async (manager) => {
       const routine = await manager.findOne(RtnEntity, {
         where: { rtnId: params.rtnId, usrId: params.usrId, isDeleted: false },
       });
 
       if (!routine) {
-        throw new Error('ROUTINE_NOT_FOUND');
+        return null;
       }
       const previousCtgId = routine.ctgId;
 
@@ -378,11 +364,7 @@ export class TypeOrmRtnRepository implements RtnRepositoryPort {
         .addOrderBy('rpt.day_of_mth', 'ASC')
         .getOne();
 
-      if (!updatedRoutine) {
-        throw new Error('ROUTINE_NOT_FOUND');
-      }
-
-      return updatedRoutine;
+      return updatedRoutine ?? null;
     });
   }
 

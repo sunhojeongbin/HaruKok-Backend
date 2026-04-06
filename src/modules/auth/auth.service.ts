@@ -1,8 +1,7 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { QueryFailedError } from 'typeorm';
 import { BusinessException } from '../../common/exceptions/business.exception';
-import { AuthResponse } from '../../common/response/auth.response';
-import { UsrRepository } from '../usr/repositories/usr.repository';
+import { AuthErrorCode } from './errors/auth-error-code';
 import { AuthEmailCodeService } from './services/auth-email-code.service';
 import { AuthFallbackService } from './services/auth-fallback.service';
 import { DeviceType, RevokeReason } from './enums/refresh-token.enum';
@@ -11,6 +10,10 @@ import { AuthRefreshTokenStoreService } from './services/rft-store.service';
 import { AuthTokenService } from './services/auth-token.service';
 import { LoginResult, RefreshResult, UserInfo } from './types/auth.types';
 import { UsrEntity } from '../usr/entities/usr.entity';
+import {
+  USR_REPOSITORY,
+  UsrRepositoryPort,
+} from '../usr/repositories/usr.repository.port';
 
 type LoginContext = {
   deviceName?: string | null;
@@ -27,8 +30,8 @@ export class AuthService {
     private readonly authEmailCodeService: AuthEmailCodeService,
     private readonly authFallbackService: AuthFallbackService,
     private readonly refreshTokenStore: AuthRefreshTokenStoreService,
-    @Optional()
-    private readonly usrRepository?: UsrRepository,
+    @Inject(USR_REPOSITORY)
+    private readonly usrRepository: UsrRepositoryPort,
   ) {}
 
   private readonly SIGNUP_TTL_SEC = 30 * 60;
@@ -65,9 +68,9 @@ export class AuthService {
   }
 
   /** @description 사용자 리포지토리 준비 상태를 확인하고 반환하는 메소드 */
-  private getUsrRepository(): UsrRepository {
-    if (!this.usrRepository || !this.usrRepository.isReady()) {
-      throw new BusinessException(AuthResponse.USER_REPOSITORY_NOT_READY);
+  private getUsrRepository(): UsrRepositoryPort {
+    if (!this.usrRepository.isReady()) {
+      throw new BusinessException(AuthErrorCode.USER_REPOSITORY_NOT_READY);
     }
     return this.usrRepository;
   }
@@ -91,11 +94,11 @@ export class AuthService {
   async sendEmailCode(email: string) {
     const normalizedEmail = this.normalizeEmail(email);
 
-    if (this.usrRepository && this.usrRepository.isReady()) {
+    if (this.usrRepository.isReady()) {
       const existing = await this.usrRepository.findByEmail(normalizedEmail);
       if (existing) {
         this.authEmailCodeService.clearCode(normalizedEmail);
-        throw new BusinessException(AuthResponse.SIGNUP_ALREADY_EXISTS);
+        throw new BusinessException(AuthErrorCode.SIGNUP_ALREADY_EXISTS);
       }
     }
 
@@ -120,11 +123,11 @@ export class AuthService {
   assertSignupToken(signupToken: string): string {
     const payload = this.authTokenService.verifySignupToken(signupToken);
     if (!payload) {
-      throw new BusinessException(AuthResponse.SIGNUP_TOKEN_INVALID);
+      throw new BusinessException(AuthErrorCode.SIGNUP_TOKEN_INVALID);
     }
 
     if (payload.purpose !== 'signup' || !payload.sub || !payload.verified) {
-      throw new BusinessException(AuthResponse.SIGNUP_TOKEN_FORMAT_INVALID);
+      throw new BusinessException(AuthErrorCode.SIGNUP_TOKEN_FORMAT_INVALID);
     }
 
     return this.normalizeEmail(payload.sub);
@@ -148,13 +151,13 @@ export class AuthService {
     const normalizedName = this.normalizeName(name);
     const emailFromToken = this.assertSignupToken(signupToken);
     if (normalizedEmail !== emailFromToken) {
-      throw new BusinessException(AuthResponse.SIGNUP_EMAIL_MISMATCH);
+      throw new BusinessException(AuthErrorCode.SIGNUP_EMAIL_MISMATCH);
     }
 
     const repo = this.getUsrRepository();
     const existing = await repo.findByEmail(normalizedEmail);
     if (existing) {
-      throw new BusinessException(AuthResponse.SIGNUP_ALREADY_EXISTS);
+      throw new BusinessException(AuthErrorCode.SIGNUP_ALREADY_EXISTS);
     }
 
     const hashedPassword =
@@ -176,9 +179,9 @@ export class AuthService {
       };
     } catch (error: unknown) {
       if (this.isUniqueViolation(error)) {
-        throw new BusinessException(AuthResponse.SIGNUP_ALREADY_EXISTS);
+        throw new BusinessException(AuthErrorCode.SIGNUP_ALREADY_EXISTS);
       }
-      throw new BusinessException(AuthResponse.SIGNUP_SAVE_FAILED);
+      throw new BusinessException(AuthErrorCode.SIGNUP_SAVE_FAILED);
     }
   }
 
@@ -195,7 +198,7 @@ export class AuthService {
   ): Promise<LoginResult | null> {
     const normalizedEmail = this.normalizeEmail(email);
 
-    if (!this.usrRepository || !this.usrRepository.isReady()) {
+    if (!this.usrRepository.isReady()) {
       return this.authFallbackService.tryLogin(normalizedEmail, password);
     }
 
@@ -258,7 +261,7 @@ export class AuthService {
       return null;
     }
 
-    if (!this.usrRepository || !this.usrRepository.isReady()) {
+    if (!this.usrRepository.isReady()) {
       return this.authFallbackService.tryRefresh(payload, refreshToken);
     }
 
@@ -295,26 +298,26 @@ export class AuthService {
   /**
    * @description 리프레시 토큰을 무효화하여 로그아웃 처리한다.
    * @param refreshToken 로그아웃 처리할 리프레시 토큰
-   * @return 로그아웃 처리 결과(성공 여부)
+   * @return 로그아웃 처리 결과
    */
-  async logout(refreshToken: string | null): Promise<void> {
-    if (!this.usrRepository || !this.usrRepository.isReady()) {
+  async logout(refreshToken: string | null): Promise<{ ok: boolean }> {
+    if (!this.usrRepository.isReady()) {
       await this.authFallbackService.logout();
-      return;
+      return { ok: true };
     }
 
     if (!refreshToken) {
-      return;
+      return { ok: true };
     }
 
     const payload = this.authTokenService.verifyRefreshToken(refreshToken);
     if (!payload) {
-      return;
+      return { ok: true };
     }
 
     const user = await this.usrRepository.findById(payload.sub);
     if (!user) {
-      return;
+      return { ok: true };
     }
 
     const isValidRefreshToken = await this.refreshTokenStore.verifyToken({
@@ -323,10 +326,11 @@ export class AuthService {
       jti: payload.jti,
     });
     if (!isValidRefreshToken) {
-      return;
+      return { ok: true };
     }
 
     await this.refreshTokenStore.revokeToken(user.usrId, RevokeReason.LOGOUT);
+    return { ok: true };
   }
 
   /**
@@ -335,7 +339,7 @@ export class AuthService {
    * @returns 사용자 정보 또는 null
    */
   async getUserById(userId: string): Promise<UserInfo | null> {
-    if (!this.usrRepository || !this.usrRepository.isReady()) {
+    if (!this.usrRepository.isReady()) {
       return this.authFallbackService.getUserById(userId);
     }
 

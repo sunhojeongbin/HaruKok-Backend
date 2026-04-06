@@ -4,7 +4,6 @@ import {
   Delete,
   Get,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   Request,
@@ -20,6 +19,7 @@ import {
 } from '@nestjs/swagger';
 import { ApiResponseDto } from '../../common/dto/api-response.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { UuidParamPipe } from '../../common/pipes/uuid-param.pipe';
 import { RtnResponse } from '../../common/response/rtn.response';
 import { CreateRtnDto } from './dtos/create-rtn.dto';
 import { ReorderRtnDto } from './dtos/reorder-rtn.dto';
@@ -338,7 +338,7 @@ export class RtnController {
   })
   async update(
     @Request() req: { user?: { userId?: string } },
-    @Param('rtnId', ParseUUIDPipe) rtnId: string,
+    @Param('rtnId', UuidParamPipe) rtnId: string,
     @Body() dto: UpdateRtnDto,
   ) {
     const routine = await this.rtnService.update(this.getUserId(req), rtnId, dto);
@@ -384,7 +384,7 @@ export class RtnController {
   })
   async delete(
     @Request() req: { user?: { userId?: string } },
-    @Param('rtnId', ParseUUIDPipe) rtnId: string,
+    @Param('rtnId', UuidParamPipe) rtnId: string,
   ) {
     const deleted = await this.rtnService.delete(this.getUserId(req), rtnId);
     return ApiResponseDto.success(
@@ -452,7 +452,7 @@ export class RtnController {
   })
   async getById(
     @Request() req: { user?: { userId?: string } },
-    @Param('rtnId', ParseUUIDPipe) rtnId: string,
+    @Param('rtnId', UuidParamPipe) rtnId: string,
   ) {
     const routine = await this.rtnService.getById(this.getUserId(req), rtnId);
     return ApiResponseDto.success(

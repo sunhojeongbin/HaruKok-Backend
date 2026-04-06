@@ -5,7 +5,6 @@ import {
   Get,
   HttpCode,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   Request,
@@ -20,6 +19,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { UuidParamPipe } from '../../common/pipes/uuid-param.pipe';
 import { CtgResponse } from '../../common/response/ctg.response';
 import { ApiResponseDto } from '../../common/dto/api-response.dto';
 import { CreateCtgDto } from './dtos/create-ctg.dto';
@@ -208,7 +208,7 @@ export class CtgController {
   })
   async getById(
     @Request() req: { user?: { userId?: string } },
-    @Param('ctgId', ParseUUIDPipe) ctgId: string,
+    @Param('ctgId', UuidParamPipe) ctgId: string,
   ) {
     const ctg = await this.ctgService.getById(this.getUserId(req), ctgId);
     return ApiResponseDto.success(
@@ -338,7 +338,7 @@ export class CtgController {
   })
   async update(
     @Request() req: { user?: { userId?: string } },
-    @Param('ctgId', ParseUUIDPipe) ctgId: string,
+    @Param('ctgId', UuidParamPipe) ctgId: string,
     @Body() dto: UpdateCtgDto,
   ) {
     const ctg = await this.ctgService.update(this.getUserId(req), ctgId, dto);
@@ -385,7 +385,7 @@ export class CtgController {
   })
   async delete(
     @Request() req: { user?: { userId?: string } },
-    @Param('ctgId', ParseUUIDPipe) ctgId: string,
+    @Param('ctgId', UuidParamPipe) ctgId: string,
   ) {
     const deleted = await this.ctgService.delete(this.getUserId(req), ctgId);
     return ApiResponseDto.success(

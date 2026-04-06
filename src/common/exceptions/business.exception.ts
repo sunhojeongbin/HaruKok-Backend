@@ -1,4 +1,5 @@
 import { HttpException } from '@nestjs/common';
+import { findResponseCodeByErrorCode } from '../errors/error-code-catalog';
 import { ResponseCode } from '../response/response-code';
 
 /**
@@ -9,15 +10,38 @@ import { ResponseCode } from '../response/response-code';
  * ```
  */
 export class BusinessException extends HttpException {
-  constructor(responseCode: ResponseCode) {
+  constructor(responseOrCode: ResponseCode | string) {
+    const resolvedResponseCode =
+      typeof responseOrCode === 'string'
+        ? findResponseCodeByErrorCode(responseOrCode)
+        : responseOrCode;
+
+    if (!resolvedResponseCode) {
+      const unknownErrorCode =
+        typeof responseOrCode === 'string'
+          ? responseOrCode
+          : 'UNKNOWN_ERROR_CODE';
+
+      super(
+        {
+          httpCode: 500,
+          message: '서버에서 문제가 생겼어요. 잠시 후 다시 시도해 주세요.',
+          success: false,
+          errorCode: unknownErrorCode,
+        },
+        500,
+      );
+      return;
+    }
+
     super(
       {
-        httpCode: responseCode.httpCode,
-        message: responseCode.message,
+        httpCode: resolvedResponseCode.httpCode,
+        message: resolvedResponseCode.message,
         success: false,
-        errorCode: responseCode.errorCode,
+        errorCode: resolvedResponseCode.errorCode,
       },
-      responseCode.httpCode,
+      resolvedResponseCode.httpCode,
     );
   }
 }

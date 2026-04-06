@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { BusinessException } from '../../../common/exceptions/business.exception';
-import { TodoResponse } from '../../../common/response/todo.response';
+import { TodoErrorCode } from '../errors/todo-error-code';
 import { TodoEntity } from '../entities/todo.entity';
 import {
   CreateTodoParams,
@@ -13,7 +13,7 @@ import {
 export class UnavailableTodoRepository implements TodoRepositoryPort {
   private rejectRepositoryNotReady<T>(): Promise<T> {
     return Promise.reject(
-      new BusinessException(TodoResponse.TODO_REPOSITORY_NOT_READY),
+      new BusinessException(TodoErrorCode.TODO_REPOSITORY_NOT_READY),
     );
   }
 

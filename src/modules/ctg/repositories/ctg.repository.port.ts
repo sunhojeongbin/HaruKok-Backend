@@ -31,6 +31,4 @@ export interface CtgRepositoryPort {
   save(category: CtgEntity): Promise<CtgEntity>;
 
   saveMany(categories: CtgEntity[]): Promise<CtgEntity[]>;
-
-  softDeleteAndReindex(category: CtgEntity, usrId: string): Promise<void>;
 }

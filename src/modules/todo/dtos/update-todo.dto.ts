@@ -31,8 +31,7 @@ export class UpdateTodoDto {
   content?: string;
 
   @ApiPropertyOptional({
-    description:
-      '수정할 메모 (빈 문자열/공백만 입력하면 메모가 삭제됩니다.)',
+    description: '수정할 메모 (빈 문자열/공백만 입력하면 메모가 삭제됩니다.)',
     example: '저녁 8시, 인터벌 포함',
     maxLength: 1000,
   })
