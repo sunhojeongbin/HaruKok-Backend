@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { BusinessException } from '../../../common/exceptions/business.exception';
-import { CtgResponse } from '../../../common/response/ctg.response';
+import { CtgErrorCode } from '../errors/ctg-error-code';
 import { CtgEntity } from '../entities/ctg.entity';
 import {
   CreateCategoryWithLimitParams,
@@ -12,7 +12,7 @@ import {
 export class UnavailableCtgRepository implements CtgRepositoryPort {
   private rejectRepositoryNotReady<T>(): Promise<T> {
     return Promise.reject(
-      new BusinessException(CtgResponse.CATEGORY_REPOSITORY_NOT_READY),
+      new BusinessException(CtgErrorCode.CATEGORY_REPOSITORY_NOT_READY),
     );
   }
 
@@ -54,11 +54,6 @@ export class UnavailableCtgRepository implements CtgRepositoryPort {
 
   saveMany(_categories: CtgEntity[]): Promise<CtgEntity[]> {
     this.consume(_categories);
-    return this.rejectRepositoryNotReady();
-  }
-
-  softDeleteAndReindex(_category: CtgEntity, _usrId: string): Promise<void> {
-    this.consume(_category, _usrId);
     return this.rejectRepositoryNotReady();
   }
 }

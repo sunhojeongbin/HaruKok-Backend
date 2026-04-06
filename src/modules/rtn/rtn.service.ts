@@ -1,7 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { QueryFailedError } from 'typeorm';
 import { BusinessException } from '../../common/exceptions/business.exception';
-import { RtnResponse } from '../../common/response/rtn.response';
+import { RtnErrorCode } from './errors/rtn-error-code';
+import {
+  normalizeRepeatOptions,
+  resolveTodoDatesByRepeat,
+  validateRepeatOptions,
+} from './domain/routine-repeat.policy';
 import { CreateRtnDto } from './dtos/create-rtn.dto';
 import { ReorderRtnDto } from './dtos/reorder-rtn.dto';
 import { UpdateRtnDto } from './dtos/update-rtn.dto';
@@ -152,7 +157,7 @@ export class RtnService {
     }
 
     if (!this.TIME_PATTERN.test(normalizedAlarmTime)) {
-      throw new BusinessException(RtnResponse.ROUTINE_ALARM_TIME_INVALID);
+      throw new BusinessException(RtnErrorCode.ROUTINE_ALARM_TIME_INVALID);
     }
 
     return normalizedAlarmTime;
@@ -164,12 +169,6 @@ export class RtnService {
     const baseDate = new Date(Date.UTC(year, month - 1, day));
     baseDate.setUTCDate(baseDate.getUTCDate() + days);
     return `${baseDate.getUTCFullYear()}-${String(baseDate.getUTCMonth() + 1).padStart(2, '0')}-${String(baseDate.getUTCDate()).padStart(2, '0')}`;
-  }
-
-  /** @description YYYY-MM-DD 기준 요일(0:일~6:토) 반환 */
-  private getDayOfWeek(dateText: string): number {
-    const [year, month, day] = dateText.split('-').map(Number);
-    return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
   }
 
   /** @description 시작~종료(포함) 날짜 배열을 생성 */
@@ -187,7 +186,7 @@ export class RtnService {
   private normalizeRoutineContent(rtnContent: string): string {
     const normalizedContent = rtnContent.trim();
     if (!normalizedContent || normalizedContent.length > 100) {
-      throw new BusinessException(RtnResponse.ROUTINE_NAME_INVALID);
+      throw new BusinessException(RtnErrorCode.ROUTINE_NAME_INVALID);
     }
     return normalizedContent;
   }
@@ -215,53 +214,6 @@ export class RtnService {
     return { dayOfWeeks, dayOfMths };
   }
 
-  /** @description 반복 조건을 타입별로 검증하여 정규화 */
-  private resolveRepeatOptions(
-    rptTypeCd: RptType,
-    dayOfWeeks?: number[],
-    dayOfMths?: number[],
-  ): { normalizedDayOfWeeks: number[]; normalizedDayOfMths: number[] } {
-    const normalizedDayOfWeeks = [...new Set(dayOfWeeks ?? [])];
-    const normalizedDayOfMths = [...new Set(dayOfMths ?? [])];
-
-    if (rptTypeCd === RptType.WEEKLY && normalizedDayOfWeeks.length === 0) {
-      throw new BusinessException(RtnResponse.ROUTINE_REPEAT_DAYS_REQUIRED);
-    }
-
-    if (rptTypeCd === RptType.MONTHLY && normalizedDayOfMths.length === 0) {
-      throw new BusinessException(RtnResponse.ROUTINE_REPEAT_DATES_REQUIRED);
-    }
-
-    return { normalizedDayOfWeeks, normalizedDayOfMths };
-  }
-
-  /** @description 반복 유형에 맞는 투두 생성 날짜를 계산 */
-  private resolveTodoDates(
-    startDt: string,
-    endDt: string,
-    rptTypeCd: RptType,
-    dayOfWeeks: number[],
-    dayOfMths: number[],
-  ): string[] {
-    const allDates = this.buildDateRange(startDt, endDt);
-
-    if (rptTypeCd === RptType.DAILY) {
-      return allDates;
-    }
-
-    if (rptTypeCd === RptType.WEEKLY) {
-      const weeklySet = new Set(dayOfWeeks);
-      return allDates.filter((dateText) =>
-        weeklySet.has(this.getDayOfWeek(dateText)),
-      );
-    }
-
-    const monthlySet = new Set(dayOfMths);
-    return allDates.filter((dateText) =>
-      monthlySet.has(Number(dateText.split('-')[2])),
-    );
-  }
-
   /**
    * @description 로그인 사용자의 루틴 생성
    * @param userId 사용자 ID
@@ -277,26 +229,30 @@ export class RtnService {
       !this.isValidDateText(dto.startDt) ||
       !this.isValidDateText(dto.endDt)
     ) {
-      throw new BusinessException(RtnResponse.ROUTINE_DATE_INVALID);
+      throw new BusinessException(RtnErrorCode.ROUTINE_DATE_INVALID);
     }
 
     if (dto.endDt < dto.startDt) {
-      throw new BusinessException(RtnResponse.ROUTINE_DATE_RANGE_INVALID);
+      throw new BusinessException(RtnErrorCode.ROUTINE_DATE_RANGE_INVALID);
     }
 
     const alarmTime = this.normalizeAlarmTime(dto.alarmTime);
-    const { normalizedDayOfWeeks, normalizedDayOfMths } =
-      this.resolveRepeatOptions(dto.rptTypeCd, dto.dayOfWeeks, dto.dayOfMths);
-
-    const todoDates = this.resolveTodoDates(
-      dto.startDt,
-      dto.endDt,
+    const repeatOptions = normalizeRepeatOptions(dto.dayOfWeeks, dto.dayOfMths);
+    const repeatOptionsError = validateRepeatOptions(
       dto.rptTypeCd,
-      normalizedDayOfWeeks,
-      normalizedDayOfMths,
+      repeatOptions,
+    );
+    if (repeatOptionsError) {
+      throw new BusinessException(repeatOptionsError);
+    }
+
+    const todoDates = resolveTodoDatesByRepeat(
+      this.buildDateRange(dto.startDt, dto.endDt),
+      dto.rptTypeCd,
+      repeatOptions,
     );
     if (todoDates.length === 0) {
-      throw new BusinessException(RtnResponse.ROUTINE_TODO_DATES_EMPTY);
+      throw new BusinessException(RtnErrorCode.ROUTINE_TODO_DATES_EMPTY);
     }
 
     const isOwnedCategory = await this.rtnRepository.isCategoryOwnedByUser(
@@ -304,7 +260,7 @@ export class RtnService {
       dto.ctgId,
     );
     if (!isOwnedCategory) {
-      throw new BusinessException(RtnResponse.ROUTINE_CATEGORY_NOT_FOUND);
+      throw new BusinessException(RtnErrorCode.ROUTINE_CATEGORY_NOT_FOUND);
     }
 
     try {
@@ -316,8 +272,8 @@ export class RtnService {
         startDt: dto.startDt,
         endDt: dto.endDt,
         alarmTime,
-        dayOfWeeks: normalizedDayOfWeeks,
-        dayOfMths: normalizedDayOfMths,
+        dayOfWeeks: repeatOptions.dayOfWeeks,
+        dayOfMths: repeatOptions.dayOfMths,
         todoDates,
       });
 
@@ -330,9 +286,9 @@ export class RtnService {
         throw error;
       }
       if (error instanceof QueryFailedError) {
-        throw new BusinessException(RtnResponse.ROUTINE_CREATE_FAILED);
+        throw new BusinessException(RtnErrorCode.ROUTINE_CREATE_FAILED);
       }
-      throw new BusinessException(RtnResponse.ROUTINE_CREATE_FAILED);
+      throw new BusinessException(RtnErrorCode.ROUTINE_CREATE_FAILED);
     }
   }
 
@@ -357,12 +313,12 @@ export class RtnService {
       dto.dayOfMths !== undefined ||
       dto.alarmTime !== undefined;
     if (!hasAnyUpdateField) {
-      throw new BusinessException(RtnResponse.ROUTINE_UPDATE_PAYLOAD_EMPTY);
+      throw new BusinessException(RtnErrorCode.ROUTINE_UPDATE_PAYLOAD_EMPTY);
     }
 
     const routine = await this.rtnRepository.findByIdAndUser(rtnId, userId);
     if (!routine) {
-      throw new BusinessException(RtnResponse.ROUTINE_NOT_FOUND);
+      throw new BusinessException(RtnErrorCode.ROUTINE_NOT_FOUND);
     }
 
     const ctgId = dto.ctgId ?? routine.ctgId;
@@ -372,7 +328,7 @@ export class RtnService {
         dto.ctgId,
       );
       if (!isOwnedCategory) {
-        throw new BusinessException(RtnResponse.ROUTINE_CATEGORY_NOT_FOUND);
+        throw new BusinessException(RtnErrorCode.ROUTINE_CATEGORY_NOT_FOUND);
       }
     }
 
@@ -384,20 +340,22 @@ export class RtnService {
     const endDt = dto.endDt ?? routine.endDt;
 
     if (!this.isValidDateText(startDt) || !this.isValidDateText(endDt)) {
-      throw new BusinessException(RtnResponse.ROUTINE_DATE_INVALID);
+      throw new BusinessException(RtnErrorCode.ROUTINE_DATE_INVALID);
     }
     if (endDt < startDt) {
-      throw new BusinessException(RtnResponse.ROUTINE_DATE_RANGE_INVALID);
+      throw new BusinessException(RtnErrorCode.ROUTINE_DATE_RANGE_INVALID);
     }
 
     const rptTypeCd = dto.rptTypeCd ?? routine.rptTypeCd;
     const currentRepeatOptions = this.resolveCurrentRepeatOptions(routine);
-    const { normalizedDayOfWeeks, normalizedDayOfMths } =
-      this.resolveRepeatOptions(
-        rptTypeCd,
-        dto.dayOfWeeks ?? currentRepeatOptions.dayOfWeeks,
-        dto.dayOfMths ?? currentRepeatOptions.dayOfMths,
-      );
+    const repeatOptions = normalizeRepeatOptions(
+      dto.dayOfWeeks ?? currentRepeatOptions.dayOfWeeks,
+      dto.dayOfMths ?? currentRepeatOptions.dayOfMths,
+    );
+    const repeatOptionsError = validateRepeatOptions(rptTypeCd, repeatOptions);
+    if (repeatOptionsError) {
+      throw new BusinessException(repeatOptionsError);
+    }
 
     const alarmTime =
       dto.alarmTime !== undefined
@@ -408,12 +366,10 @@ export class RtnService {
     const targetStartDate = startDt > todayDate ? startDt : todayDate;
     const todoDatesFromToday =
       targetStartDate <= endDt
-        ? this.resolveTodoDates(
-            targetStartDate,
-            endDt,
+        ? resolveTodoDatesByRepeat(
+            this.buildDateRange(targetStartDate, endDt),
             rptTypeCd,
-            normalizedDayOfWeeks,
-            normalizedDayOfMths,
+            repeatOptions,
           )
         : [];
 
@@ -427,24 +383,25 @@ export class RtnService {
         startDt,
         endDt,
         alarmTime,
-        dayOfWeeks: normalizedDayOfWeeks,
-        dayOfMths: normalizedDayOfMths,
+        dayOfWeeks: repeatOptions.dayOfWeeks,
+        dayOfMths: repeatOptions.dayOfMths,
         todayDate,
         todoDatesFromToday,
       });
+
+      if (!updatedRoutine) {
+        throw new BusinessException(RtnErrorCode.ROUTINE_NOT_FOUND);
+      }
 
       return this.toRoutineListItem(updatedRoutine);
     } catch (error) {
       if (error instanceof BusinessException) {
         throw error;
       }
-      if (error instanceof Error && error.message === 'ROUTINE_NOT_FOUND') {
-        throw new BusinessException(RtnResponse.ROUTINE_NOT_FOUND);
-      }
       if (error instanceof QueryFailedError) {
-        throw new BusinessException(RtnResponse.ROUTINE_UPDATE_FAILED);
+        throw new BusinessException(RtnErrorCode.ROUTINE_UPDATE_FAILED);
       }
-      throw new BusinessException(RtnResponse.ROUTINE_UPDATE_FAILED);
+      throw new BusinessException(RtnErrorCode.ROUTINE_UPDATE_FAILED);
     }
   }
 
@@ -456,7 +413,7 @@ export class RtnService {
   async delete(userId: string, rtnId: string): Promise<RoutineDeleteResult> {
     const routine = await this.rtnRepository.findByIdAndUser(rtnId, userId);
     if (!routine) {
-      throw new BusinessException(RtnResponse.ROUTINE_NOT_FOUND);
+      throw new BusinessException(RtnErrorCode.ROUTINE_NOT_FOUND);
     }
 
     try {
@@ -466,7 +423,7 @@ export class RtnService {
         this.getTodayDate(),
       );
       if (!isDeleted) {
-        throw new BusinessException(RtnResponse.ROUTINE_NOT_FOUND);
+        throw new BusinessException(RtnErrorCode.ROUTINE_NOT_FOUND);
       }
 
       return { rtnId };
@@ -475,9 +432,9 @@ export class RtnService {
         throw error;
       }
       if (error instanceof QueryFailedError) {
-        throw new BusinessException(RtnResponse.ROUTINE_DELETE_FAILED);
+        throw new BusinessException(RtnErrorCode.ROUTINE_DELETE_FAILED);
       }
-      throw new BusinessException(RtnResponse.ROUTINE_DELETE_FAILED);
+      throw new BusinessException(RtnErrorCode.ROUTINE_DELETE_FAILED);
     }
   }
 
@@ -486,25 +443,26 @@ export class RtnService {
    * @param userId 사용자 ID
    * @param dto 루틴 순서 변경 요청 데이터
    */
-  async reorder(userId: string, dto: ReorderRtnDto): Promise<RoutineOrderItem[]> {
+  async reorder(
+    userId: string,
+    dto: ReorderRtnDto,
+  ): Promise<RoutineOrderItem[]> {
     const isOwnedCategory = await this.rtnRepository.isCategoryOwnedByUser(
       userId,
       dto.ctgId,
     );
     if (!isOwnedCategory) {
-      throw new BusinessException(RtnResponse.ROUTINE_CATEGORY_NOT_FOUND);
+      throw new BusinessException(RtnErrorCode.ROUTINE_CATEGORY_NOT_FOUND);
     }
 
-    const routinesInCategory = await this.rtnRepository.findAllByUserAndCategory(
-      userId,
-      dto.ctgId,
-    );
+    const routinesInCategory =
+      await this.rtnRepository.findAllByUserAndCategory(userId, dto.ctgId);
 
     if (dto.rtnIds.length !== routinesInCategory.length) {
-      throw new BusinessException(RtnResponse.ROUTINE_ORDER_INVALID);
+      throw new BusinessException(RtnErrorCode.ROUTINE_ORDER_INVALID);
     }
     if (new Set(dto.rtnIds).size !== dto.rtnIds.length) {
-      throw new BusinessException(RtnResponse.ROUTINE_ORDER_INVALID);
+      throw new BusinessException(RtnErrorCode.ROUTINE_ORDER_INVALID);
     }
 
     const routineById = new Map(
@@ -514,7 +472,7 @@ export class RtnService {
     for (const rtnId of dto.rtnIds) {
       const routine = routineById.get(rtnId);
       if (!routine) {
-        throw new BusinessException(RtnResponse.ROUTINE_ORDER_INVALID);
+        throw new BusinessException(RtnErrorCode.ROUTINE_ORDER_INVALID);
       }
       reorderedRoutines.push(routine);
     }
@@ -536,9 +494,9 @@ export class RtnService {
         throw error;
       }
       if (error instanceof QueryFailedError) {
-        throw new BusinessException(RtnResponse.ROUTINE_ORDER_UPDATE_FAILED);
+        throw new BusinessException(RtnErrorCode.ROUTINE_ORDER_UPDATE_FAILED);
       }
-      throw new BusinessException(RtnResponse.ROUTINE_ORDER_UPDATE_FAILED);
+      throw new BusinessException(RtnErrorCode.ROUTINE_ORDER_UPDATE_FAILED);
     }
   }
 
@@ -551,7 +509,7 @@ export class RtnService {
     try {
       const routine = await this.rtnRepository.findByIdAndUser(rtnId, userId);
       if (!routine) {
-        throw new BusinessException(RtnResponse.ROUTINE_NOT_FOUND);
+        throw new BusinessException(RtnErrorCode.ROUTINE_NOT_FOUND);
       }
       return this.toRoutineListItem(routine);
     } catch (error) {
@@ -559,9 +517,9 @@ export class RtnService {
         throw error;
       }
       if (error instanceof QueryFailedError) {
-        throw new BusinessException(RtnResponse.ROUTINE_GET_FAILED);
+        throw new BusinessException(RtnErrorCode.ROUTINE_GET_FAILED);
       }
-      throw new BusinessException(RtnResponse.ROUTINE_GET_FAILED);
+      throw new BusinessException(RtnErrorCode.ROUTINE_GET_FAILED);
     }
   }
 
@@ -578,9 +536,9 @@ export class RtnService {
         throw error;
       }
       if (error instanceof QueryFailedError) {
-        throw new BusinessException(RtnResponse.ROUTINE_LIST_FAILED);
+        throw new BusinessException(RtnErrorCode.ROUTINE_LIST_FAILED);
       }
-      throw new BusinessException(RtnResponse.ROUTINE_LIST_FAILED);
+      throw new BusinessException(RtnErrorCode.ROUTINE_LIST_FAILED);
     }
   }
 }

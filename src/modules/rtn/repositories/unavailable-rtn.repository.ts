@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { BusinessException } from '../../../common/exceptions/business.exception';
-import { RtnResponse } from '../../../common/response/rtn.response';
+import { RtnErrorCode } from '../errors/rtn-error-code';
 import { RtnEntity } from '../entities/rtn.entity';
 import {
   CreateRoutineParams,
@@ -14,7 +14,7 @@ import {
 export class UnavailableRtnRepository implements RtnRepositoryPort {
   private rejectRepositoryNotReady<T>(): Promise<T> {
     return Promise.reject(
-      new BusinessException(RtnResponse.ROUTINE_REPOSITORY_NOT_READY),
+      new BusinessException(RtnErrorCode.ROUTINE_REPOSITORY_NOT_READY),
     );
   }
 
@@ -37,7 +37,7 @@ export class UnavailableRtnRepository implements RtnRepositoryPort {
     return this.rejectRepositoryNotReady();
   }
 
-  updateFromToday(_params: UpdateRoutineParams): Promise<RtnEntity> {
+  updateFromToday(_params: UpdateRoutineParams): Promise<RtnEntity | null> {
     this.consume(_params);
     return this.rejectRepositoryNotReady();
   }

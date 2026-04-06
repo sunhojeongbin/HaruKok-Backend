@@ -2,6 +2,7 @@ import { Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UsrEntity } from '../entities/usr.entity';
+import { UsrRepositoryPort } from './usr.repository.port';
 
 /** @description 사용자 생성에 필요한 저장 파라미터 */
 type CreateUsrParams = {
@@ -16,7 +17,7 @@ type CreateUsrParams = {
 
 /** @description 사용자 리포지토리 래퍼 */
 @Injectable()
-export class UsrRepository {
+export class UsrRepository implements UsrRepositoryPort {
   constructor(
     @Optional()
     @InjectRepository(UsrEntity)

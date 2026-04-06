@@ -21,17 +21,3 @@ export class LoginDto {
   @IsNotEmpty()
   password: string;
 }
-
-export class LoginResponseDto {
-  @ApiProperty({ description: '사용자 ID' })
-  id: string;
-
-  @ApiProperty({ description: '사용자 이메일' })
-  email: string;
-
-  @ApiProperty({ description: '사용자 이름' })
-  name: string;
-
-  @ApiProperty({ description: '액세스 토큰' })
-  accessToken: string;
-}

@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { QueryFailedError } from 'typeorm';
 import { BusinessException } from '../../common/exceptions/business.exception';
-import { TodoResponse } from '../../common/response/todo.response';
+import { TodoErrorCode } from './errors/todo-error-code';
 import { CreateTodoDto } from './dtos/create-todo.dto';
 import { UpdateTodoDto } from './dtos/update-todo.dto';
 import { TodoEntity } from './entities/todo.entity';
@@ -135,7 +135,7 @@ export class TodoService {
       !normalizedContent ||
       normalizedContent.length > this.MAX_CONTENT_LENGTH
     ) {
-      throw new BusinessException(TodoResponse.TODO_CONTENT_INVALID);
+      throw new BusinessException(TodoErrorCode.TODO_CONTENT_INVALID);
     }
     return normalizedContent;
   }
@@ -152,7 +152,7 @@ export class TodoService {
     }
 
     if (normalizedMemo.length > this.MAX_MEMO_LENGTH) {
-      throw new BusinessException(TodoResponse.TODO_MEMO_INVALID);
+      throw new BusinessException(TodoErrorCode.TODO_MEMO_INVALID);
     }
 
     return normalizedMemo;
@@ -165,7 +165,7 @@ export class TodoService {
       !normalizedKeyword ||
       normalizedKeyword.length > this.MAX_SEARCH_KEYWORD_LENGTH
     ) {
-      throw new BusinessException(TodoResponse.TODO_SEARCH_KEYWORD_INVALID);
+      throw new BusinessException(TodoErrorCode.TODO_SEARCH_KEYWORD_INVALID);
     }
     return normalizedKeyword;
   }
@@ -176,7 +176,7 @@ export class TodoService {
     ctgId: string | null,
   ): Promise<string> {
     if (!ctgId) {
-      throw new BusinessException(TodoResponse.TODO_CATEGORY_NOT_FOUND);
+      throw new BusinessException(TodoErrorCode.TODO_CATEGORY_NOT_FOUND);
     }
 
     const isOwnedCategory = await this.todoRepository.isCategoryOwnedByUser(
@@ -184,7 +184,7 @@ export class TodoService {
       ctgId,
     );
     if (!isOwnedCategory) {
-      throw new BusinessException(TodoResponse.TODO_CATEGORY_NOT_FOUND);
+      throw new BusinessException(TodoErrorCode.TODO_CATEGORY_NOT_FOUND);
     }
 
     return ctgId;
@@ -200,7 +200,7 @@ export class TodoService {
 
     if (yearMonth) {
       if (!this.YEAR_MONTH_PATTERN.test(yearMonth)) {
-        throw new BusinessException(TodoResponse.TODO_QUERY_MONTH_INVALID);
+        throw new BusinessException(TodoErrorCode.TODO_QUERY_MONTH_INVALID);
       }
       const [parsedYear, parsedMonth] = yearMonth.split('-').map(Number);
       year = parsedYear;
@@ -247,7 +247,7 @@ export class TodoService {
       if (error instanceof BusinessException) {
         throw error;
       }
-      throw new BusinessException(TodoResponse.TODO_LIST_FAILED);
+      throw new BusinessException(TodoErrorCode.TODO_LIST_FAILED);
     }
   }
 
@@ -260,14 +260,14 @@ export class TodoService {
     try {
       const todo = await this.todoRepository.findByIdAndUser(todoId, userId);
       if (!todo) {
-        throw new BusinessException(TodoResponse.TODO_NOT_FOUND);
+        throw new BusinessException(TodoErrorCode.TODO_NOT_FOUND);
       }
       return this.toTodoListItem(todo);
     } catch (error) {
       if (error instanceof BusinessException) {
         throw error;
       }
-      throw new BusinessException(TodoResponse.TODO_GET_FAILED);
+      throw new BusinessException(TodoErrorCode.TODO_GET_FAILED);
     }
   }
 
@@ -293,7 +293,7 @@ export class TodoService {
       if (error instanceof BusinessException) {
         throw error;
       }
-      throw new BusinessException(TodoResponse.TODO_SEARCH_FAILED);
+      throw new BusinessException(TodoErrorCode.TODO_SEARCH_FAILED);
     }
   }
 
@@ -308,7 +308,7 @@ export class TodoService {
     const todoDate = dto.todoDate ?? this.getTodayDate();
 
     if (!this.isValidDateText(todoDate)) {
-      throw new BusinessException(TodoResponse.TODO_DATE_INVALID);
+      throw new BusinessException(TodoErrorCode.TODO_DATE_INVALID);
     }
 
     const isOwnedCategory = await this.todoRepository.isCategoryOwnedByUser(
@@ -316,7 +316,7 @@ export class TodoService {
       dto.ctgId,
     );
     if (!isOwnedCategory) {
-      throw new BusinessException(TodoResponse.TODO_CATEGORY_NOT_FOUND);
+      throw new BusinessException(TodoErrorCode.TODO_CATEGORY_NOT_FOUND);
     }
 
     try {
@@ -335,10 +335,10 @@ export class TodoService {
       }
 
       if (error instanceof QueryFailedError) {
-        throw new BusinessException(TodoResponse.TODO_CREATE_FAILED);
+        throw new BusinessException(TodoErrorCode.TODO_CREATE_FAILED);
       }
 
-      throw new BusinessException(TodoResponse.TODO_CREATE_FAILED);
+      throw new BusinessException(TodoErrorCode.TODO_CREATE_FAILED);
     }
   }
 
@@ -358,12 +358,12 @@ export class TodoService {
       dto.content === undefined &&
       dto.memo === undefined
     ) {
-      throw new BusinessException(TodoResponse.TODO_UPDATE_PAYLOAD_EMPTY);
+      throw new BusinessException(TodoErrorCode.TODO_UPDATE_PAYLOAD_EMPTY);
     }
 
     const todo = await this.todoRepository.findByIdAndUser(todoId, userId);
     if (!todo) {
-      throw new BusinessException(TodoResponse.TODO_NOT_FOUND);
+      throw new BusinessException(TodoErrorCode.TODO_NOT_FOUND);
     }
 
     if (dto.ctgId !== undefined) {
@@ -372,7 +372,7 @@ export class TodoService {
         dto.ctgId,
       );
       if (!isOwnedCategory) {
-        throw new BusinessException(TodoResponse.TODO_CATEGORY_NOT_FOUND);
+        throw new BusinessException(TodoErrorCode.TODO_CATEGORY_NOT_FOUND);
       }
       todo.ctgId = dto.ctgId;
     }
@@ -394,10 +394,10 @@ export class TodoService {
       }
 
       if (error instanceof QueryFailedError) {
-        throw new BusinessException(TodoResponse.TODO_UPDATE_FAILED);
+        throw new BusinessException(TodoErrorCode.TODO_UPDATE_FAILED);
       }
 
-      throw new BusinessException(TodoResponse.TODO_UPDATE_FAILED);
+      throw new BusinessException(TodoErrorCode.TODO_UPDATE_FAILED);
     }
   }
 
@@ -417,7 +417,7 @@ export class TodoService {
         userId,
       );
       if (!updatedTodo) {
-        throw new BusinessException(TodoResponse.TODO_NOT_FOUND);
+        throw new BusinessException(TodoErrorCode.TODO_NOT_FOUND);
       }
 
       return this.toTodoListItem(updatedTodo);
@@ -427,10 +427,12 @@ export class TodoService {
       }
 
       if (error instanceof QueryFailedError) {
-        throw new BusinessException(TodoResponse.TODO_COMPLETION_UPDATE_FAILED);
+        throw new BusinessException(
+          TodoErrorCode.TODO_COMPLETION_UPDATE_FAILED,
+        );
       }
 
-      throw new BusinessException(TodoResponse.TODO_COMPLETION_UPDATE_FAILED);
+      throw new BusinessException(TodoErrorCode.TODO_COMPLETION_UPDATE_FAILED);
     }
   }
 
@@ -445,13 +447,13 @@ export class TodoService {
       userId,
     );
     if (!sourceTodo) {
-      throw new BusinessException(TodoResponse.TODO_NOT_FOUND);
+      throw new BusinessException(TodoErrorCode.TODO_NOT_FOUND);
     }
 
     const todayDate = this.getTodayDate();
     if (sourceTodo.todoDate === todayDate) {
       throw new BusinessException(
-        TodoResponse.TODO_REPEAT_TODAY_SOURCE_INVALID,
+        TodoErrorCode.TODO_REPEAT_TODAY_SOURCE_INVALID,
       );
     }
 
@@ -475,10 +477,10 @@ export class TodoService {
       }
 
       if (error instanceof QueryFailedError) {
-        throw new BusinessException(TodoResponse.TODO_REPEAT_TODAY_FAILED);
+        throw new BusinessException(TodoErrorCode.TODO_REPEAT_TODAY_FAILED);
       }
 
-      throw new BusinessException(TodoResponse.TODO_REPEAT_TODAY_FAILED);
+      throw new BusinessException(TodoErrorCode.TODO_REPEAT_TODAY_FAILED);
     }
   }
 
@@ -493,13 +495,13 @@ export class TodoService {
       userId,
     );
     if (!sourceTodo) {
-      throw new BusinessException(TodoResponse.TODO_NOT_FOUND);
+      throw new BusinessException(TodoErrorCode.TODO_NOT_FOUND);
     }
 
     const todayDate = this.getTodayDate();
     if (sourceTodo.todoDate !== todayDate) {
       throw new BusinessException(
-        TodoResponse.TODO_REPEAT_TOMORROW_SOURCE_INVALID,
+        TodoErrorCode.TODO_REPEAT_TOMORROW_SOURCE_INVALID,
       );
     }
 
@@ -523,10 +525,10 @@ export class TodoService {
       }
 
       if (error instanceof QueryFailedError) {
-        throw new BusinessException(TodoResponse.TODO_REPEAT_TOMORROW_FAILED);
+        throw new BusinessException(TodoErrorCode.TODO_REPEAT_TOMORROW_FAILED);
       }
 
-      throw new BusinessException(TodoResponse.TODO_REPEAT_TOMORROW_FAILED);
+      throw new BusinessException(TodoErrorCode.TODO_REPEAT_TOMORROW_FAILED);
     }
   }
 
@@ -546,14 +548,14 @@ export class TodoService {
       userId,
     );
     if (!sourceTodo) {
-      throw new BusinessException(TodoResponse.TODO_NOT_FOUND);
+      throw new BusinessException(TodoErrorCode.TODO_NOT_FOUND);
     }
 
     const hasInvalidDate = dates.some(
       (dateText) => !this.isValidDateText(dateText),
     );
     if (hasInvalidDate) {
-      throw new BusinessException(TodoResponse.TODO_REPEAT_DATE_INVALID);
+      throw new BusinessException(TodoErrorCode.TODO_REPEAT_DATE_INVALID);
     }
 
     const hasSameDateAsSource = dates.some(
@@ -561,7 +563,7 @@ export class TodoService {
     );
     if (hasSameDateAsSource) {
       throw new BusinessException(
-        TodoResponse.TODO_REPEAT_TARGET_SAME_AS_SOURCE,
+        TodoErrorCode.TODO_REPEAT_TARGET_SAME_AS_SOURCE,
       );
     }
 
@@ -588,10 +590,10 @@ export class TodoService {
       }
 
       if (error instanceof QueryFailedError) {
-        throw new BusinessException(TodoResponse.TODO_REPEAT_NEXT_FAILED);
+        throw new BusinessException(TodoErrorCode.TODO_REPEAT_NEXT_FAILED);
       }
 
-      throw new BusinessException(TodoResponse.TODO_REPEAT_NEXT_FAILED);
+      throw new BusinessException(TodoErrorCode.TODO_REPEAT_NEXT_FAILED);
     }
   }
 
@@ -608,7 +610,7 @@ export class TodoService {
         userId,
       );
       if (!isDeleted) {
-        throw new BusinessException(TodoResponse.TODO_NOT_FOUND);
+        throw new BusinessException(TodoErrorCode.TODO_NOT_FOUND);
       }
 
       return { todoId };
@@ -618,10 +620,10 @@ export class TodoService {
       }
 
       if (error instanceof QueryFailedError) {
-        throw new BusinessException(TodoResponse.TODO_DELETE_FAILED);
+        throw new BusinessException(TodoErrorCode.TODO_DELETE_FAILED);
       }
 
-      throw new BusinessException(TodoResponse.TODO_DELETE_FAILED);
+      throw new BusinessException(TodoErrorCode.TODO_DELETE_FAILED);
     }
   }
 }

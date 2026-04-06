@@ -1,4 +1,9 @@
-import { Module } from '@nestjs/common';
+import {
+  MiddlewareConsumer,
+  Module,
+  NestModule,
+  RequestMethod,
+} from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -18,6 +23,7 @@ import { InMemoryAuthRefreshTokenStoreService } from './services/memory-rft-stor
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { MailModule } from '../mail/mail.module';
 import { UsrModule } from '../usr/usr.module';
+import { RefreshTokenCookieMiddleware } from './middlewares/refresh-token-cookie.middleware';
 
 const authDatabaseImports =
   process.env.SKIP_DB === 'true' ? [] : [TypeOrmModule.forFeature([RftEntity])];
@@ -67,4 +73,13 @@ const refreshTokenStoreProviders =
     JwtAuthGuard,
   ],
 })
-export class AuthModule {}
+export class AuthModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer
+      .apply(RefreshTokenCookieMiddleware)
+      .forRoutes(
+        { path: 'auth/refresh', method: RequestMethod.POST },
+        { path: 'auth/logout', method: RequestMethod.POST },
+      );
+  }
+}

@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsrEntity } from './entities/usr.entity';
 import { UsrSocialEntity } from './entities/usr-social.entity';
 import { UsrRepository } from './repositories/usr.repository';
+import { USR_REPOSITORY } from './repositories/usr.repository.port';
 
 const usrDatabaseImports =
   process.env.SKIP_DB === 'true'
@@ -11,7 +12,13 @@ const usrDatabaseImports =
 
 @Module({
   imports: [...usrDatabaseImports],
-  providers: [UsrRepository],
-  exports: [UsrRepository],
+  providers: [
+    UsrRepository,
+    {
+      provide: USR_REPOSITORY,
+      useExisting: UsrRepository,
+    },
+  ],
+  exports: [USR_REPOSITORY],
 })
 export class UsrModule {}

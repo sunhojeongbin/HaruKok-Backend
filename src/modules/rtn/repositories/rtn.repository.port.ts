@@ -47,7 +47,7 @@ export interface RtnRepositoryPort {
 
   createWithTodos(params: CreateRoutineParams): Promise<CreateRoutineResult>;
 
-  updateFromToday(params: UpdateRoutineParams): Promise<RtnEntity>;
+  updateFromToday(params: UpdateRoutineParams): Promise<RtnEntity | null>;
 
   deleteFromToday(
     rtnId: string,

@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { randomUUID } from 'crypto';
 import ms, { StringValue } from 'ms';
 import { BusinessException } from '../../../common/exceptions/business.exception';
-import { AuthResponse } from '../../../common/response/auth.response';
+import { AuthErrorCode } from '../errors/auth-error-code';
 import {
   IssuedTokenPair,
   SignupPayload,
@@ -21,7 +21,7 @@ export class AuthTokenService {
   private getRefreshTokenSecret(): string {
     const secret = process.env.JWT_REFRESH_SECRET ?? process.env.JWT_SECRET;
     if (!secret) {
-      throw new BusinessException(AuthResponse.AUTH_CONFIG_INVALID);
+      throw new BusinessException(AuthErrorCode.AUTH_CONFIG_INVALID);
     }
     return secret;
   }

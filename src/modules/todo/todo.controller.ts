@@ -5,7 +5,6 @@ import {
   Get,
   HttpCode,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -23,6 +22,7 @@ import {
 } from '@nestjs/swagger';
 import { ApiResponseDto } from '../../common/dto/api-response.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { UuidParamPipe } from '../../common/pipes/uuid-param.pipe';
 import { TodoResponse } from '../../common/response/todo.response';
 import { CreateTodoDto } from './dtos/create-todo.dto';
 import { ListTodosQueryDto } from './dtos/list-todos-query.dto';
@@ -213,7 +213,7 @@ export class TodoController {
   })
   async update(
     @Request() req: { user?: { userId?: string } },
-    @Param('todoId', ParseUUIDPipe) todoId: string,
+    @Param('todoId', UuidParamPipe) todoId: string,
     @Body() dto: UpdateTodoDto,
   ) {
     const todo = await this.todoService.update(
@@ -265,7 +265,7 @@ export class TodoController {
   })
   async updateCompletion(
     @Request() req: { user?: { userId?: string } },
-    @Param('todoId', ParseUUIDPipe) todoId: string,
+    @Param('todoId', UuidParamPipe) todoId: string,
   ) {
     const todo = await this.todoService.updateCompletion(
       this.getUserId(req),
@@ -322,7 +322,7 @@ export class TodoController {
   })
   async repeatToday(
     @Request() req: { user?: { userId?: string } },
-    @Param('todoId', ParseUUIDPipe) todoId: string,
+    @Param('todoId', UuidParamPipe) todoId: string,
   ) {
     const todo = await this.todoService.repeatToday(
       this.getUserId(req),
@@ -379,7 +379,7 @@ export class TodoController {
   })
   async repeatTomorrow(
     @Request() req: { user?: { userId?: string } },
-    @Param('todoId', ParseUUIDPipe) todoId: string,
+    @Param('todoId', UuidParamPipe) todoId: string,
   ) {
     const todo = await this.todoService.repeatTomorrow(
       this.getUserId(req),
@@ -444,7 +444,7 @@ export class TodoController {
   })
   async repeatNext(
     @Request() req: { user?: { userId?: string } },
-    @Param('todoId', ParseUUIDPipe) todoId: string,
+    @Param('todoId', UuidParamPipe) todoId: string,
     @Body() dto: RepeatNextTodoDto,
   ) {
     const todos = await this.todoService.repeatNext(
@@ -495,7 +495,7 @@ export class TodoController {
   })
   async delete(
     @Request() req: { user?: { userId?: string } },
-    @Param('todoId', ParseUUIDPipe) todoId: string,
+    @Param('todoId', UuidParamPipe) todoId: string,
   ) {
     const deleted = await this.todoService.delete(this.getUserId(req), todoId);
     return ApiResponseDto.success(
@@ -610,7 +610,7 @@ export class TodoController {
   })
   async getById(
     @Request() req: { user?: { userId?: string } },
-    @Param('todoId', ParseUUIDPipe) todoId: string,
+    @Param('todoId', UuidParamPipe) todoId: string,
   ) {
     const todo = await this.todoService.getById(this.getUserId(req), todoId);
     return ApiResponseDto.success(
