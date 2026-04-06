@@ -214,7 +214,10 @@ export class CtgService {
     try {
       await this.ctgCascadeRepository.softDeleteAndReindex(category, userId);
       return { ctgId };
-    } catch {
+    } catch (err) {
+      if (err instanceof BusinessException) {
+        throw err;
+      }
       throw new BusinessException(CtgErrorCode.CATEGORY_DELETE_FAILED);
     }
   }
@@ -280,7 +283,10 @@ export class CtgService {
       return reorderedCategories.map((category) =>
         this.toCategoryResult(category),
       );
-    } catch {
+    } catch (err) {
+      if (err instanceof BusinessException) {
+        throw err;
+      }
       throw new BusinessException(CtgErrorCode.CATEGORY_ORDER_UPDATE_FAILED);
     }
   }
