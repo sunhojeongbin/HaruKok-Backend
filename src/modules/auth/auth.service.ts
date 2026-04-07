@@ -143,12 +143,8 @@ export class AuthService {
     const repo = this.getUsrRepository();
 
     const user = await repo.findByEmail(normalizedEmail);
-    if (!user) {
-      throw new BusinessException(AuthErrorCode.PASSWORD_RESET_USER_NOT_FOUND);
-    }
-
-    if (user.joinTypeCd !== 'EMAIL') {
-      throw new BusinessException(AuthErrorCode.PASSWORD_RESET_NOT_AVAILABLE);
+    if (!user || user.joinTypeCd !== 'EMAIL') {
+      return { ok: true };
     }
 
     await this.authTemporaryPasswordService.sendTemporaryPassword(
@@ -175,7 +171,7 @@ export class AuthService {
       throw new BusinessException(AuthErrorCode.PASSWORD_RESET_NOT_AVAILABLE);
     }
 
-    this.authTemporaryPasswordService.verifyTemporaryPassword(
+    this.authTemporaryPasswordService.verifyTemporaryPasswordWithoutConsuming(
       normalizedEmail,
       temporaryPassword,
     );
@@ -184,7 +180,10 @@ export class AuthService {
       await this.authPasswordService.hashPassword(newPassword);
     user.pwd = hashedPassword;
     user.pwdHash = this.authPasswordService.algorithm;
-    user.usrStatCd = 'ACTIVE';
+    if (user.usrStatCd === 'LOCKED') {
+      user.usrStatCd = 'ACTIVE';
+      user.lockedUntil = null;
+    }
     this.resetLoginAttemptState(user);
 
     try {
@@ -192,6 +191,9 @@ export class AuthService {
       await this.refreshTokenStore.revokeToken(
         user.usrId,
         RevokeReason.PASSWORD_CHANGE,
+      );
+      this.authTemporaryPasswordService.consumeTemporaryPassword(
+        normalizedEmail,
       );
       return { ok: true };
     } catch {

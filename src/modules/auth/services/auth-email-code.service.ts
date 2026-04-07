@@ -104,6 +104,15 @@ export class AuthEmailCodeService {
       throw new BusinessException(AuthErrorCode.EMAIL_CODE_EXPIRED_OR_NOT_FOUND);
     }
 
+    if (storedCode.sendAvailableAt > Date.now()) {
+      const remainingSeconds = this.getRemainingSeconds(
+        storedCode.sendAvailableAt,
+      );
+      throw new BusinessException(AuthErrorCode.EMAIL_CODE_RESEND_TOO_SOON, {
+        message: `${remainingSeconds}초 후에 다시 시도해 주세요.`,
+      });
+    }
+
     if (
       storedCode.resendCount >= 3 &&
       storedCode.resendRateLimitUntil &&
@@ -131,7 +140,6 @@ export class AuthEmailCodeService {
     );
     storedCode.expiresAt = Date.now() + this.CODE_TTL_SEC * 1000;
     storedCode.attempts = 0;
-    storedCode.verifyLockedUntil = null;
     storedCode.sendAvailableAt = Date.now() + this.RESEND_COOLDOWN_SEC * 1000;
     storedCode.resendCount += 1;
 

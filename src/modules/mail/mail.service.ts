@@ -19,9 +19,7 @@ export class MailService {
     const from = process.env.MAIL_FROM ?? 'no-reply@example.com';
 
     try {
-      this.logger.debug(
-        `SMTP 설정: host=${process.env.SMTP_HOST}, user=${process.env.SMTP_USER}, port=${process.env.SMTP_PORT}`,
-      );
+      this.logger.debug('SMTP configured for email verification');
 
       await this.transporter.sendMail({
         from,
@@ -30,7 +28,7 @@ export class MailService {
         text: `인증 코드: ${code}\n유효시간은 10분입니다.`,
       });
 
-      this.logger.log(`이메일 발송 성공: ${email}`);
+      this.logger.log('이메일 인증 코드 발송 성공');
     } catch (error) {
       this.logger.error(
         `이메일 발송 실패: ${error instanceof Error ? error.message : String(error)}`,
@@ -43,9 +41,7 @@ export class MailService {
     const from = process.env.MAIL_FROM ?? 'no-reply@example.com';
 
     try {
-      this.logger.debug(
-        `SMTP 설정: host=${process.env.SMTP_HOST}, user=${process.env.SMTP_USER}, port=${process.env.SMTP_PORT}`,
-      );
+      this.logger.debug('SMTP configured for temporary password');
 
       await this.transporter.sendMail({
         from,
@@ -59,7 +55,7 @@ export class MailService {
         ].join('\n'),
       });
 
-      this.logger.log(`임시 비밀번호 이메일 발송 성공: ${email}`);
+      this.logger.log('임시 비밀번호 이메일 발송 성공');
     } catch (error) {
       this.logger.error(
         `임시 비밀번호 이메일 발송 실패: ${error instanceof Error ? error.message : String(error)}`,

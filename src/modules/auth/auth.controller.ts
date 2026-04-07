@@ -153,6 +153,7 @@ export class AuthController {
   }
 
   /** @description 이메일 인증 번호를 재전송하는 API */
+  @HttpCode(HttpStatus.OK)
   @Post('email/resend')
   @ApiOperation({
     summary: '이메일 인증 번호 재전송',
