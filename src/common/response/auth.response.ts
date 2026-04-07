@@ -33,6 +33,11 @@ export const AuthResponse = {
       '인증 번호를 찾을 수 없거나 이미 만료됐어요. 인증 번호를 다시 요청해 주세요.',
     errorCode: 'EMAIL_CODE_EXPIRED_OR_NOT_FOUND',
   },
+  EMAIL_CODE_RESEND_TOO_SOON: {
+    httpCode: 429,
+    message: '인증 번호를 방금 보내드렸어요. 잠시 후 다시 요청해 주세요.',
+    errorCode: 'EMAIL_CODE_RESEND_TOO_SOON',
+  },
   EMAIL_CODE_ATTEMPTS_EXCEEDED: {
     httpCode: 429,
     message:
@@ -47,6 +52,59 @@ export const AuthResponse = {
   EMAIL_CODE_VERIFIED: {
     httpCode: 200,
     message: '이메일 인증이 완료됐어요.',
+  },
+  EMAIL_CODE_RESENT: {
+    httpCode: 200,
+    message: '이메일 인증 번호를 다시 보내드렸어요.',
+  },
+  PASSWORD_RESET_TEMP_SENT: {
+    httpCode: 200,
+    message: '임시 비밀번호를 이메일로 보내드렸어요.',
+  },
+  PASSWORD_RESET_TEMP_SEND_FAILED: {
+    httpCode: 500,
+    message:
+      '임시 비밀번호를 보내는 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.',
+    errorCode: 'PASSWORD_RESET_TEMP_SEND_FAILED',
+  },
+  PASSWORD_RESET_USER_NOT_FOUND: {
+    httpCode: 404,
+    message:
+      '입력한 이메일로 가입된 계정을 찾지 못했어요. 이메일을 다시 확인해 주세요.',
+    errorCode: 'PASSWORD_RESET_USER_NOT_FOUND',
+  },
+  PASSWORD_RESET_NOT_AVAILABLE: {
+    httpCode: 400,
+    message:
+      '이 계정은 비밀번호 재설정을 지원하지 않아요. 가입한 소셜 로그인으로 이용해 주세요.',
+    errorCode: 'PASSWORD_RESET_NOT_AVAILABLE',
+  },
+  TEMP_PASSWORD_EXPIRED_OR_NOT_FOUND: {
+    httpCode: 400,
+    message:
+      '임시 비밀번호를 찾을 수 없거나 만료됐어요. 임시 비밀번호를 다시 받아 주세요.',
+    errorCode: 'TEMP_PASSWORD_EXPIRED_OR_NOT_FOUND',
+  },
+  TEMP_PASSWORD_ATTEMPTS_EXCEEDED: {
+    httpCode: 429,
+    message:
+      '임시 비밀번호 확인 시도가 너무 많아요. 임시 비밀번호를 다시 받아 주세요.',
+    errorCode: 'TEMP_PASSWORD_ATTEMPTS_EXCEEDED',
+  },
+  TEMP_PASSWORD_INVALID: {
+    httpCode: 400,
+    message: '임시 비밀번호가 올바르지 않아요. 다시 확인해 주세요.',
+    errorCode: 'TEMP_PASSWORD_INVALID',
+  },
+  PASSWORD_RESET_SUCCESS: {
+    httpCode: 200,
+    message: '비밀번호가 변경됐어요. 새 비밀번호로 로그인해 주세요.',
+  },
+  PASSWORD_RESET_SAVE_FAILED: {
+    httpCode: 500,
+    message:
+      '비밀번호를 변경하는 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.',
+    errorCode: 'PASSWORD_RESET_SAVE_FAILED',
   },
   AUTH_CONFIG_INVALID: {
     httpCode: 500,

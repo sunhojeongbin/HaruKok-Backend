@@ -16,6 +16,7 @@ import { RftEntity } from './entities/rft.entity';
 import { AuthEmailCodeService } from './services/auth-email-code.service';
 import { AuthFallbackService } from './services/auth-fallback.service';
 import { AuthPasswordService } from './services/auth-password.service';
+import { AuthTemporaryPasswordService } from './services/auth-temporary-password.service';
 import { AuthRefreshTokenStoreService } from './services/rft-store.service';
 import { AuthTokenService } from './services/auth-token.service';
 import { DbAuthRefreshTokenStoreService } from './services/db-rft-store.service';
@@ -67,6 +68,7 @@ const refreshTokenStoreProviders =
     AuthTokenService,
     AuthPasswordService,
     AuthEmailCodeService,
+    AuthTemporaryPasswordService,
     AuthFallbackService,
     ...refreshTokenStoreProviders,
     JwtStrategy,

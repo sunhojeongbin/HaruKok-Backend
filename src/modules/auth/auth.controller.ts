@@ -27,6 +27,8 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { SendEmailCodeDto } from './dtos/send-email-code.dto';
 import { VerifyEmailCodeDto } from './dtos/verify-email-code.dto';
 import { SignupDto } from './dtos/signup.dto';
+import { SendTemporaryPasswordDto } from './dtos/send-temporary-password.dto';
+import { ResetPasswordDto } from './dtos/reset-password.dto';
 import { DeviceType } from './enums/refresh-token.enum';
 import { Request, Response } from 'express';
 import {
@@ -118,6 +120,18 @@ export class AuthController {
     },
   })
   @ApiResponse({
+    status: 429,
+    description: '인증 번호 재요청 제한',
+    schema: {
+      example: {
+        httpCode: 429,
+        message: '43초 후에 다시 시도해 주세요.',
+        success: false,
+        errorCode: AuthResponse.EMAIL_CODE_RESEND_TOO_SOON.errorCode,
+      },
+    },
+  })
+  @ApiResponse({
     status: 409,
     description: '이미 가입된 이메일',
     schema: {
@@ -135,6 +149,77 @@ export class AuthController {
       result,
       AuthResponse.EMAIL_CODE_SENT.message,
       AuthResponse.EMAIL_CODE_SENT.httpCode,
+    );
+  }
+
+  /** @description 이메일 인증 번호를 재전송하는 API */
+  @Post('email/resend')
+  @ApiOperation({
+    summary: '이메일 인증 번호 재전송',
+    description:
+      '인증 번호를 다시 전송합니다. 재전송은 3회까지는 즉시 가능하고, 4회째부터는 1분 대기 제한이 적용됩니다.',
+  })
+  @ApiBody({
+    schema: {
+      example: {
+        email: 'user@example.com',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: '인증 번호 재전송 성공',
+    schema: {
+      example: {
+        httpCode: 200,
+        message: AuthResponse.EMAIL_CODE_RESENT.message,
+        success: true,
+        data: { ok: true },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '재전송 가능한 인증 번호가 없음(만료/미요청)',
+    schema: {
+      example: {
+        httpCode: 400,
+        message: AuthResponse.EMAIL_CODE_EXPIRED_OR_NOT_FOUND.message,
+        success: false,
+        errorCode: AuthResponse.EMAIL_CODE_EXPIRED_OR_NOT_FOUND.errorCode,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 429,
+    description: '재전송 제한 초과',
+    schema: {
+      example: {
+        httpCode: 429,
+        message: '37초 후에 다시 시도해 주세요.',
+        success: false,
+        errorCode: AuthResponse.EMAIL_CODE_RESEND_TOO_SOON.errorCode,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 409,
+    description: '이미 가입된 이메일',
+    schema: {
+      example: {
+        httpCode: 409,
+        message: AuthResponse.SIGNUP_ALREADY_EXISTS.message,
+        success: false,
+        errorCode: AuthResponse.SIGNUP_ALREADY_EXISTS.errorCode,
+      },
+    },
+  })
+  async resend(@Body() dto: SendEmailCodeDto) {
+    const result = await this.authService.resendEmailCode(dto.email);
+    return ApiResponseDto.success(
+      result,
+      AuthResponse.EMAIL_CODE_RESENT.message,
+      AuthResponse.EMAIL_CODE_RESENT.httpCode,
     );
   }
 
@@ -182,11 +267,11 @@ export class AuthController {
   })
   @ApiResponse({
     status: 429,
-    description: '인증 코드 검증 시도 횟수 초과',
+    description: '인증 코드 검증 시도 횟수 초과(3회, 1분 잠금)',
     schema: {
       example: {
         httpCode: 429,
-        message: AuthResponse.EMAIL_CODE_ATTEMPTS_EXCEEDED.message,
+        message: '58초 후에 다시 시도해 주세요.',
         success: false,
         errorCode: 'EMAIL_CODE_ATTEMPTS_EXCEEDED',
       },
@@ -198,6 +283,172 @@ export class AuthController {
       result,
       AuthResponse.EMAIL_CODE_VERIFIED.message,
       AuthResponse.EMAIL_CODE_VERIFIED.httpCode,
+    );
+  }
+
+  /** @description 비밀번호 재설정용 임시 비밀번호를 메일로 전송하는 API */
+  @Post('password/temp/send')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '비밀번호 재설정 임시 비밀번호 전송',
+    description:
+      '입력한 이메일의 계정을 확인한 뒤 비밀번호 재설정에 사용할 임시 비밀번호를 전송합니다.',
+  })
+  @ApiBody({
+    schema: {
+      example: {
+        email: 'user@example.com',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: '임시 비밀번호 전송 성공',
+    schema: {
+      example: {
+        httpCode: 200,
+        message: AuthResponse.PASSWORD_RESET_TEMP_SENT.message,
+        success: true,
+        data: {
+          ok: true,
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '비밀번호 재설정 불가 계정',
+    schema: {
+      example: {
+        httpCode: 400,
+        message: AuthResponse.PASSWORD_RESET_NOT_AVAILABLE.message,
+        success: false,
+        errorCode: AuthResponse.PASSWORD_RESET_NOT_AVAILABLE.errorCode,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: '사용자 없음',
+    schema: {
+      example: {
+        httpCode: 404,
+        message: AuthResponse.PASSWORD_RESET_USER_NOT_FOUND.message,
+        success: false,
+        errorCode: AuthResponse.PASSWORD_RESET_USER_NOT_FOUND.errorCode,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 500,
+    description: '임시 비밀번호 전송 실패',
+    schema: {
+      example: {
+        httpCode: 500,
+        message: AuthResponse.PASSWORD_RESET_TEMP_SEND_FAILED.message,
+        success: false,
+        errorCode: AuthResponse.PASSWORD_RESET_TEMP_SEND_FAILED.errorCode,
+      },
+    },
+  })
+  async sendTemporaryPassword(@Body() dto: SendTemporaryPasswordDto) {
+    const result = await this.authService.sendTemporaryPassword(dto.email);
+    return ApiResponseDto.success(
+      result,
+      AuthResponse.PASSWORD_RESET_TEMP_SENT.message,
+      AuthResponse.PASSWORD_RESET_TEMP_SENT.httpCode,
+    );
+  }
+
+  /** @description 임시 비밀번호를 검증하고 새 비밀번호로 변경하는 API */
+  @Post('password/reset')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '비밀번호 재설정',
+    description: '이메일과 임시 비밀번호를 검증한 뒤 새 비밀번호로 변경합니다.',
+  })
+  @ApiBody({
+    schema: {
+      example: {
+        email: 'user@example.com',
+        temporaryPassword: 'aB3dEf7GhK',
+        newPassword: 'newStrongPassw0rd!',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: '비밀번호 재설정 성공',
+    schema: {
+      example: {
+        httpCode: 200,
+        message: AuthResponse.PASSWORD_RESET_SUCCESS.message,
+        success: true,
+        data: {
+          ok: true,
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '임시 비밀번호 검증 실패 또는 재설정 불가 계정',
+    schema: {
+      example: {
+        httpCode: 400,
+        message: AuthResponse.TEMP_PASSWORD_INVALID.message,
+        success: false,
+        errorCode: AuthResponse.TEMP_PASSWORD_INVALID.errorCode,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: '사용자 없음',
+    schema: {
+      example: {
+        httpCode: 404,
+        message: AuthResponse.PASSWORD_RESET_USER_NOT_FOUND.message,
+        success: false,
+        errorCode: AuthResponse.PASSWORD_RESET_USER_NOT_FOUND.errorCode,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 429,
+    description: '임시 비밀번호 검증 시도 횟수 초과',
+    schema: {
+      example: {
+        httpCode: 429,
+        message: AuthResponse.TEMP_PASSWORD_ATTEMPTS_EXCEEDED.message,
+        success: false,
+        errorCode: AuthResponse.TEMP_PASSWORD_ATTEMPTS_EXCEEDED.errorCode,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 500,
+    description: '비밀번호 재설정 처리 실패',
+    schema: {
+      example: {
+        httpCode: 500,
+        message: AuthResponse.PASSWORD_RESET_SAVE_FAILED.message,
+        success: false,
+        errorCode: AuthResponse.PASSWORD_RESET_SAVE_FAILED.errorCode,
+      },
+    },
+  })
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    const result = await this.authService.resetPassword(
+      dto.email,
+      dto.temporaryPassword,
+      dto.newPassword,
+    );
+
+    return ApiResponseDto.success(
+      result,
+      AuthResponse.PASSWORD_RESET_SUCCESS.message,
+      AuthResponse.PASSWORD_RESET_SUCCESS.httpCode,
     );
   }
 
