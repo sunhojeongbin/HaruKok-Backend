@@ -10,7 +10,10 @@ import { ResponseCode } from '../response/response-code';
  * ```
  */
 export class BusinessException extends HttpException {
-  constructor(responseOrCode: ResponseCode | string) {
+  constructor(
+    responseOrCode: ResponseCode | string,
+    options?: { message?: string },
+  ) {
     const resolvedResponseCode =
       typeof responseOrCode === 'string'
         ? findResponseCodeByErrorCode(responseOrCode)
@@ -25,7 +28,9 @@ export class BusinessException extends HttpException {
       super(
         {
           httpCode: 500,
-          message: '서버에서 문제가 생겼어요. 잠시 후 다시 시도해 주세요.',
+          message:
+            options?.message ??
+            '서버에서 문제가 생겼어요. 잠시 후 다시 시도해 주세요.',
           success: false,
           errorCode: unknownErrorCode,
         },
@@ -37,7 +42,7 @@ export class BusinessException extends HttpException {
     super(
       {
         httpCode: resolvedResponseCode.httpCode,
-        message: resolvedResponseCode.message,
+        message: options?.message ?? resolvedResponseCode.message,
         success: false,
         errorCode: resolvedResponseCode.errorCode,
       },

@@ -6,6 +6,7 @@ import { AuthEmailCodeService } from './services/auth-email-code.service';
 import { AuthFallbackService } from './services/auth-fallback.service';
 import { DeviceType, RevokeReason } from './enums/refresh-token.enum';
 import { AuthPasswordService } from './services/auth-password.service';
+import { AuthTemporaryPasswordService } from './services/auth-temporary-password.service';
 import { AuthRefreshTokenStoreService } from './services/rft-store.service';
 import { AuthTokenService } from './services/auth-token.service';
 import { LoginResult, RefreshResult, UserInfo } from './types/auth.types';
@@ -28,6 +29,7 @@ export class AuthService {
     private readonly authTokenService: AuthTokenService,
     private readonly authPasswordService: AuthPasswordService,
     private readonly authEmailCodeService: AuthEmailCodeService,
+    private readonly authTemporaryPasswordService: AuthTemporaryPasswordService,
     private readonly authFallbackService: AuthFallbackService,
     private readonly refreshTokenStore: AuthRefreshTokenStoreService,
     @Inject(USR_REPOSITORY)
@@ -106,6 +108,22 @@ export class AuthService {
     return { ok: true };
   }
 
+  /** @description 이메일 인증 코드를 재전송한다. */
+  async resendEmailCode(email: string) {
+    const normalizedEmail = this.normalizeEmail(email);
+
+    if (this.usrRepository.isReady()) {
+      const existing = await this.usrRepository.findByEmail(normalizedEmail);
+      if (existing) {
+        this.authEmailCodeService.clearCode(normalizedEmail);
+        throw new BusinessException(AuthErrorCode.SIGNUP_ALREADY_EXISTS);
+      }
+    }
+
+    await this.authEmailCodeService.resendCode(normalizedEmail);
+    return { ok: true };
+  }
+
   /** @description 이메일 인증 코드를 검증하고 회원가입 토큰을 발급한다. */
   verifyEmailCode(email: string, code: string) {
     const normalizedEmail = this.normalizeEmail(email);
@@ -117,6 +135,70 @@ export class AuthService {
     );
 
     return { ok: true, signupToken };
+  }
+
+  /** @description 비밀번호 재설정용 임시 비밀번호를 발급/전송한다. */
+  async sendTemporaryPassword(email: string): Promise<{ ok: true }> {
+    const normalizedEmail = this.normalizeEmail(email);
+    const repo = this.getUsrRepository();
+
+    const user = await repo.findByEmail(normalizedEmail);
+    if (!user || user.joinTypeCd !== 'EMAIL') {
+      return { ok: true };
+    }
+
+    await this.authTemporaryPasswordService.sendTemporaryPassword(
+      normalizedEmail,
+    );
+    return { ok: true };
+  }
+
+  /** @description 임시 비밀번호를 검증하고 비밀번호를 새 값으로 변경한다. */
+  async resetPassword(
+    email: string,
+    temporaryPassword: string,
+    newPassword: string,
+  ): Promise<{ ok: true }> {
+    const normalizedEmail = this.normalizeEmail(email);
+    const repo = this.getUsrRepository();
+    const user = await repo.findByEmail(normalizedEmail);
+
+    if (!user) {
+      throw new BusinessException(AuthErrorCode.PASSWORD_RESET_USER_NOT_FOUND);
+    }
+
+    if (user.joinTypeCd !== 'EMAIL') {
+      throw new BusinessException(AuthErrorCode.PASSWORD_RESET_NOT_AVAILABLE);
+    }
+
+    this.authTemporaryPasswordService.verifyTemporaryPasswordWithoutConsuming(
+      normalizedEmail,
+      temporaryPassword,
+    );
+
+    const hashedPassword =
+      await this.authPasswordService.hashPassword(newPassword);
+    user.pwd = hashedPassword;
+    user.pwdHash = this.authPasswordService.algorithm;
+    if (user.usrStatCd === 'LOCKED') {
+      user.usrStatCd = 'ACTIVE';
+      user.lockedUntil = null;
+    }
+    this.resetLoginAttemptState(user);
+
+    try {
+      await repo.save(user);
+      await this.refreshTokenStore.revokeToken(
+        user.usrId,
+        RevokeReason.PASSWORD_CHANGE,
+      );
+      this.authTemporaryPasswordService.consumeTemporaryPassword(
+        normalizedEmail,
+      );
+      return { ok: true };
+    } catch {
+      throw new BusinessException(AuthErrorCode.PASSWORD_RESET_SAVE_FAILED);
+    }
   }
 
   /** @description 회원가입 토큰의 유효성을 검증하고 이메일(subject)을 반환한다. */
