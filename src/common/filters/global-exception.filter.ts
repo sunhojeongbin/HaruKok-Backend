@@ -26,25 +26,34 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     }
 
     // Nest 기본 예외: { statusCode, message, error } or ValidationPipe: message가 배열
-    const obj = payload as Record<string, any>;
+    const obj =
+      payload && typeof payload === 'object'
+        ? (payload as Record<string, unknown>)
+        : {};
 
     // BusinessException은 우리가 { httpCode, message, success, errorCode }로 던짐
+    const httpCodeCandidate = obj.httpCode ?? obj.statusCode;
     const httpCode =
-      obj.httpCode ??
-      obj.statusCode ??
-      status ??
-      HttpStatus.INTERNAL_SERVER_ERROR;
+      typeof httpCodeCandidate === 'number'
+        ? httpCodeCandidate
+        : status || HttpStatus.INTERNAL_SERVER_ERROR;
 
     // message가 배열(ValidationPipe)인 경우 첫 메시지 or join 처리
-    const message = Array.isArray(obj.message)
-      ? obj.message.join(', ')
-      : (obj.message ?? '오류 발생');
+    const messageCandidate = obj.message;
+    const message = Array.isArray(messageCandidate)
+      ? messageCandidate.map((item) => String(item)).join(', ')
+      : typeof messageCandidate === 'string'
+        ? messageCandidate
+        : '오류가 발생했어요. 잠시 후 다시 시도해 주세요.';
+
+    const errorCode =
+      typeof obj.errorCode === 'string' ? obj.errorCode : undefined;
 
     response.status(httpCode).json({
       httpCode,
       message,
       success: false,
-      errorCode: obj.errorCode,
+      errorCode,
     });
   }
 }

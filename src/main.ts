@@ -9,7 +9,7 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { BusinessException } from './common/exceptions/business.exception';
 import { TodoResponse } from './common/response/todo.response';
-import { SearchTodosQueryDto } from './modules/todo/dtos/search-todos-query.dto';
+import { SearchTodosQueryDto } from './modules/todo/presentation/dtos/search-todos-query.dto';
 
 function flattenValidationErrors(errors: ValidationError[]): ValidationError[] {
   return errors.flatMap((error) => [
@@ -112,9 +112,7 @@ async function bootstrap() {
           }
 
           if (!swaggerWindow.__harukokSwaggerLogoutPatched) {
-            const authActions = swaggerWindow.ui
-              ?.getSystem?.()
-              .authActions as
+            const authActions = swaggerWindow.ui?.getSystem?.().authActions as
               | {
                   logout?: (...args: unknown[]) => unknown;
                 }
@@ -167,9 +165,7 @@ async function bootstrap() {
               // localStorage 접근 실패는 무시
             }
 
-            const authActions = swaggerWindow.ui
-              ?.getSystem?.()
-              .authActions as
+            const authActions = swaggerWindow.ui?.getSystem?.().authActions as
               | {
                   logout?: (...args: unknown[]) => unknown;
                 }
@@ -223,10 +219,7 @@ async function bootstrap() {
           const accessToken = payload?.data?.accessToken;
           if (accessToken) {
             try {
-              localStorage.setItem(
-                'HARUKOK_SWAGGER_ACCESS_TOKEN',
-                accessToken,
-              );
+              localStorage.setItem('HARUKOK_SWAGGER_ACCESS_TOKEN', accessToken);
             } catch {
               // localStorage 접근 실패는 무시
             }

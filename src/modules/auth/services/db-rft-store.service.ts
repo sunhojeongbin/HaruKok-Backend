@@ -6,6 +6,7 @@ import { RftEntity } from '../entities/rft.entity';
 import { RevokeReason } from '../enums/refresh-token.enum';
 import {
   AuthRefreshTokenStoreService,
+  RevokeRefreshTokenParams,
   UpsertRefreshTokenParams,
   VerifyRefreshTokenParams,
 } from './rft-store.service';
@@ -93,17 +94,21 @@ export class DbAuthRefreshTokenStoreService extends AuthRefreshTokenStoreService
     return token.tokenHash === this.hashToken(params.refreshToken);
   }
 
-  async revokeToken(usrId: string, reason: RevokeReason): Promise<void> {
+  async revokeToken(params: RevokeRefreshTokenParams): Promise<void> {
     const token = await this.repository.findOne({
-      where: { usrId },
+      where: { usrId: params.usrId },
     });
     if (!token || token.isRevoked) {
       return;
     }
 
+    if (params.jti && token.jti !== params.jti) {
+      return;
+    }
+
     token.isRevoked = true;
     token.revokedAt = new Date();
-    token.revokeReason = reason;
+    token.revokeReason = params.reason;
     await this.repository.save(token);
   }
 }

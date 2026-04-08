@@ -45,16 +45,20 @@ export class AuthTemporaryPasswordService {
     let password = '';
 
     for (let i = 0; i < this.TEMP_PASSWORD_LENGTH; i += 1) {
-      password += this.TEMP_PASSWORD_CHARS[
-        randomBytes[i] % this.TEMP_PASSWORD_CHARS.length
-      ];
+      password +=
+        this.TEMP_PASSWORD_CHARS[
+          randomBytes[i] % this.TEMP_PASSWORD_CHARS.length
+        ];
     }
 
     return password;
   }
 
   /** @description 이메일/비밀번호/시크릿 조합으로 임시 비밀번호 해시를 생성한다. */
-  private hashTemporaryPassword(email: string, temporaryPassword: string): string {
+  private hashTemporaryPassword(
+    email: string,
+    temporaryPassword: string,
+  ): string {
     return sha256(
       `${email}:${temporaryPassword}:${this.getTemporaryPasswordSecret()}`,
     );
@@ -70,9 +74,12 @@ export class AuthTemporaryPasswordService {
     const existing = this.temporaryPasswordStore.get(normalizedEmail);
     if (existing && existing.cooldownUntil > Date.now()) {
       const remainingSeconds = this.getRemainingSeconds(existing.cooldownUntil);
-      throw new BusinessException(AuthErrorCode.PASSWORD_RESET_TEMP_SEND_FAILED, {
-        message: `${remainingSeconds}초 후에 다시 시도해 주세요.`,
-      });
+      throw new BusinessException(
+        AuthErrorCode.PASSWORD_RESET_TEMP_SEND_FAILED,
+        {
+          message: `${remainingSeconds}초 후에 다시 시도해 주세요.`,
+        },
+      );
     }
 
     const temporaryPassword = this.generateTemporaryPassword();
@@ -87,7 +94,9 @@ export class AuthTemporaryPasswordService {
         temporaryPassword,
       );
     } catch {
-      throw new BusinessException(AuthErrorCode.PASSWORD_RESET_TEMP_SEND_FAILED);
+      throw new BusinessException(
+        AuthErrorCode.PASSWORD_RESET_TEMP_SEND_FAILED,
+      );
     }
 
     this.temporaryPasswordStore.set(normalizedEmail, {
@@ -99,17 +108,24 @@ export class AuthTemporaryPasswordService {
   }
 
   /** @description 임시 비밀번호를 검증한다. */
-  verifyTemporaryPassword(normalizedEmail: string, temporaryPassword: string): void {
+  verifyTemporaryPassword(
+    normalizedEmail: string,
+    temporaryPassword: string,
+  ): void {
     const stored = this.temporaryPasswordStore.get(normalizedEmail);
 
     if (!stored || stored.expiresAt < Date.now()) {
       this.temporaryPasswordStore.delete(normalizedEmail);
-      throw new BusinessException(AuthErrorCode.TEMP_PASSWORD_EXPIRED_OR_NOT_FOUND);
+      throw new BusinessException(
+        AuthErrorCode.TEMP_PASSWORD_EXPIRED_OR_NOT_FOUND,
+      );
     }
 
     if (stored.attempts >= this.MAX_VERIFY_ATTEMPTS) {
       this.temporaryPasswordStore.delete(normalizedEmail);
-      throw new BusinessException(AuthErrorCode.TEMP_PASSWORD_ATTEMPTS_EXCEEDED);
+      throw new BusinessException(
+        AuthErrorCode.TEMP_PASSWORD_ATTEMPTS_EXCEEDED,
+      );
     }
 
     const incomingHash = this.hashTemporaryPassword(
@@ -127,7 +143,9 @@ export class AuthTemporaryPasswordService {
       this.temporaryPasswordStore.set(normalizedEmail, stored);
       if (stored.attempts >= this.MAX_VERIFY_ATTEMPTS) {
         this.temporaryPasswordStore.delete(normalizedEmail);
-        throw new BusinessException(AuthErrorCode.TEMP_PASSWORD_ATTEMPTS_EXCEEDED);
+        throw new BusinessException(
+          AuthErrorCode.TEMP_PASSWORD_ATTEMPTS_EXCEEDED,
+        );
       }
       throw new BusinessException(AuthErrorCode.TEMP_PASSWORD_INVALID);
     }
@@ -135,7 +153,15 @@ export class AuthTemporaryPasswordService {
     this.temporaryPasswordStore.delete(normalizedEmail);
   }
 
-  /** @description 임시 비밀번호를 검증하지만 소비하지 않는다. */
+  /** @description 임시 비밀번호를 원자적으로 검증하고 소비(삭제)한다. */
+  verifyAndConsumeTemporaryPassword(
+    normalizedEmail: string,
+    temporaryPassword: string,
+  ): void {
+    this.verifyTemporaryPassword(normalizedEmail, temporaryPassword);
+  }
+
+  /** @description 임시 비밀번호를 검증하지만 삭제하지 않는다. */
   verifyTemporaryPasswordWithoutConsuming(
     normalizedEmail: string,
     temporaryPassword: string,
@@ -144,12 +170,16 @@ export class AuthTemporaryPasswordService {
 
     if (!stored || stored.expiresAt < Date.now()) {
       this.temporaryPasswordStore.delete(normalizedEmail);
-      throw new BusinessException(AuthErrorCode.TEMP_PASSWORD_EXPIRED_OR_NOT_FOUND);
+      throw new BusinessException(
+        AuthErrorCode.TEMP_PASSWORD_EXPIRED_OR_NOT_FOUND,
+      );
     }
 
     if (stored.attempts >= this.MAX_VERIFY_ATTEMPTS) {
       this.temporaryPasswordStore.delete(normalizedEmail);
-      throw new BusinessException(AuthErrorCode.TEMP_PASSWORD_ATTEMPTS_EXCEEDED);
+      throw new BusinessException(
+        AuthErrorCode.TEMP_PASSWORD_ATTEMPTS_EXCEEDED,
+      );
     }
 
     const incomingHash = this.hashTemporaryPassword(
@@ -167,13 +197,15 @@ export class AuthTemporaryPasswordService {
       this.temporaryPasswordStore.set(normalizedEmail, stored);
       if (stored.attempts >= this.MAX_VERIFY_ATTEMPTS) {
         this.temporaryPasswordStore.delete(normalizedEmail);
-        throw new BusinessException(AuthErrorCode.TEMP_PASSWORD_ATTEMPTS_EXCEEDED);
+        throw new BusinessException(
+          AuthErrorCode.TEMP_PASSWORD_ATTEMPTS_EXCEEDED,
+        );
       }
       throw new BusinessException(AuthErrorCode.TEMP_PASSWORD_INVALID);
     }
   }
 
-  /** @description 검증된 임시 비밀번호를 소비(삭제)한다. */
+  /** @description 검증된 임시 비밀번호를 삭제한다. */
   consumeTemporaryPassword(normalizedEmail: string): void {
     this.temporaryPasswordStore.delete(normalizedEmail);
   }
