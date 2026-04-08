@@ -10,10 +10,21 @@ import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { getJwtModuleOptions } from '../../config/jwt.config';
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
+import { AuthController } from './presentation/auth.controller';
+import { EMAIL_CODE_STORE } from './application/ports/email-code-store.port';
+import { GetUserByIdUseCase } from './application/use-cases/get-user-by-id.use-case';
+import { LoginUseCase } from './application/use-cases/login.use-case';
+import { LogoutUseCase } from './application/use-cases/logout.use-case';
+import { ResendEmailCodeUseCase } from './application/use-cases/resend-email-code.use-case';
+import { RefreshUseCase } from './application/use-cases/refresh.use-case';
+import { ResetPasswordUseCase } from './application/use-cases/reset-password.use-case';
+import { SendEmailCodeUseCase } from './application/use-cases/send-email-code.use-case';
+import { SendTemporaryPasswordUseCase } from './application/use-cases/send-temporary-password.use-case';
+import { SignupUseCase } from './application/use-cases/signup.use-case';
+import { VerifyEmailCodeUseCase } from './application/use-cases/verify-email-code.use-case';
 import { RftEntity } from './entities/rft.entity';
-import { AuthEmailCodeService } from './services/auth-email-code.service';
+import { InMemoryEmailCodeStore } from './infrastructure/stores/in-memory-email-code.store';
+import { AuthEmailCodeService } from './application/services/auth-email-code.service';
 import { AuthFallbackService } from './services/auth-fallback.service';
 import { AuthPasswordService } from './services/auth-password.service';
 import { AuthTemporaryPasswordService } from './services/auth-temporary-password.service';
@@ -64,9 +75,23 @@ const refreshTokenStoreProviders =
   ],
   controllers: [AuthController],
   providers: [
-    AuthService,
+    SendEmailCodeUseCase,
+    ResendEmailCodeUseCase,
+    VerifyEmailCodeUseCase,
+    SendTemporaryPasswordUseCase,
+    ResetPasswordUseCase,
+    SignupUseCase,
+    LoginUseCase,
+    RefreshUseCase,
+    LogoutUseCase,
+    GetUserByIdUseCase,
     AuthTokenService,
     AuthPasswordService,
+    InMemoryEmailCodeStore,
+    {
+      provide: EMAIL_CODE_STORE,
+      useExisting: InMemoryEmailCodeStore,
+    },
     AuthEmailCodeService,
     AuthTemporaryPasswordService,
     AuthFallbackService,

@@ -1,16 +1,19 @@
 import { Module, Provider } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { CtgController } from './ctg.controller';
-import { CtgService } from './ctg.service';
+import { CtgController } from './presentation/ctg.controller';
+import { CreateCtgUseCase } from './application/use-cases/create-ctg.use-case';
+import { DeleteCtgUseCase } from './application/use-cases/delete-ctg.use-case';
+import { GetCtgByIdUseCase } from './application/use-cases/get-ctg-by-id.use-case';
+import { GetCtgListUseCase } from './application/use-cases/get-ctg-list.use-case';
+import { ReorderCtgUseCase } from './application/use-cases/reorder-ctg.use-case';
+import { UpdateCtgUseCase } from './application/use-cases/update-ctg.use-case';
 import { CtgEntity } from './entities/ctg.entity';
-import {
-  CTG_CASCADE_REPOSITORY,
-} from './repositories/ctg-cascade.repository.port';
-import { TypeOrmCtgCascadeRepository } from './repositories/ctg-cascade.repository';
-import { TypeOrmCtgRepository } from './repositories/ctg.repository';
-import { CTG_REPOSITORY } from './repositories/ctg.repository.port';
-import { UnavailableCtgCascadeRepository } from './repositories/unavailable-ctg-cascade.repository';
-import { UnavailableCtgRepository } from './repositories/unavailable-ctg.repository';
+import { CTG_CASCADE_REPOSITORY } from './application/ports/ctg-cascade.repository.port';
+import { CTG_REPOSITORY } from './application/ports/ctg.repository.port';
+import { TypeOrmCtgCascadeRepository } from './infrastructure/repositories/typeorm-ctg-cascade.repository';
+import { TypeOrmCtgRepository } from './infrastructure/repositories/typeorm-ctg.repository';
+import { UnavailableCtgCascadeRepository } from './infrastructure/repositories/unavailable-ctg-cascade.repository';
+import { UnavailableCtgRepository } from './infrastructure/repositories/unavailable-ctg.repository';
 
 /**
  * @description 카테고리 엔티티 TypeORM 등록 설정
@@ -49,10 +52,15 @@ const ctgCascadeRepositoryProviders: Provider[] = isSkipDb
   imports: [...ctgDatabaseImports],
   controllers: [CtgController],
   providers: [
-    CtgService,
+    CreateCtgUseCase,
+    GetCtgListUseCase,
+    GetCtgByIdUseCase,
+    ReorderCtgUseCase,
+    UpdateCtgUseCase,
+    DeleteCtgUseCase,
     ...ctgRepositoryProviders,
     ...ctgCascadeRepositoryProviders,
   ],
-  exports: [CtgService, CTG_REPOSITORY, CTG_CASCADE_REPOSITORY],
+  exports: [CTG_REPOSITORY, CTG_CASCADE_REPOSITORY],
 })
 export class CtgModule {}

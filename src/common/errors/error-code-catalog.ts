@@ -15,8 +15,24 @@ const catalogs = [
 
 const errorCodeCatalog = new Map<string, ResponseCode>();
 
+function isResponseCode(value: unknown): value is ResponseCode {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Partial<ResponseCode>;
+  return (
+    typeof candidate.httpCode === 'number' &&
+    typeof candidate.message === 'string'
+  );
+}
+
 for (const catalog of catalogs) {
-  for (const responseCode of Object.values(catalog)) {
+  for (const responseCode of Object.values(catalog) as unknown[]) {
+    if (!isResponseCode(responseCode)) {
+      continue;
+    }
+
     if (!responseCode.errorCode) {
       continue;
     }

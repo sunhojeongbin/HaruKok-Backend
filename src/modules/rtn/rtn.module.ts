@@ -1,12 +1,17 @@
 import { Module, Provider } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { RtnController } from './rtn.controller';
-import { RtnService } from './rtn.service';
 import { RtnEntity } from './entities/rtn.entity';
 import { RtnRptEntity } from './entities/rtn-rpt.entity';
-import { TypeOrmRtnRepository } from './repositories/rtn.repository';
-import { RTN_REPOSITORY } from './repositories/rtn.repository.port';
-import { UnavailableRtnRepository } from './repositories/unavailable-rtn.repository';
+import { RtnController } from './presentation/rtn.controller';
+import { RTN_REPOSITORY } from './application/ports/rtn.repository.port';
+import { TypeOrmRtnRepository } from './infrastructure/repositories/typeorm-rtn.repository';
+import { UnavailableRtnRepository } from './infrastructure/repositories/unavailable-rtn.repository';
+import { CreateRtnUseCase } from './application/use-cases/create-rtn.use-case';
+import { UpdateRtnUseCase } from './application/use-cases/update-rtn.use-case';
+import { DeleteRtnUseCase } from './application/use-cases/delete-rtn.use-case';
+import { ReorderRtnUseCase } from './application/use-cases/reorder-rtn.use-case';
+import { GetRtnByIdUseCase } from './application/use-cases/get-rtn-by-id.use-case';
+import { GetRtnListUseCase } from './application/use-cases/get-rtn-list.use-case';
 
 const isSkipDb = process.env.SKIP_DB === 'true';
 const rtnDatabaseImports = isSkipDb
@@ -24,7 +29,15 @@ const rtnRepositoryProviders: Provider[] = isSkipDb
 @Module({
   imports: [...rtnDatabaseImports],
   controllers: [RtnController],
-  providers: [RtnService, ...rtnRepositoryProviders],
-  exports: [RtnService, RTN_REPOSITORY],
+  providers: [
+    CreateRtnUseCase,
+    UpdateRtnUseCase,
+    DeleteRtnUseCase,
+    ReorderRtnUseCase,
+    GetRtnByIdUseCase,
+    GetRtnListUseCase,
+    ...rtnRepositoryProviders,
+  ],
+  exports: [RTN_REPOSITORY],
 })
 export class RtnModule {}

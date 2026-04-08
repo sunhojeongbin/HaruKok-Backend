@@ -4,6 +4,21 @@ import * as request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 
+function hasAccessToken(
+  value: unknown,
+): value is { data: { accessToken: string } } {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const data = (value as { data?: unknown }).data;
+  if (!data || typeof data !== 'object') {
+    return false;
+  }
+
+  return typeof (data as { accessToken?: unknown }).accessToken === 'string';
+}
+
 describe('Auth (e2e)', () => {
   let app: INestApplication;
 
@@ -56,7 +71,7 @@ describe('Auth (e2e)', () => {
       .set('Cookie', refreshTokenCookie)
       .expect(200);
 
-    expect(refreshResponse.body?.data?.accessToken).toBeDefined();
+    expect(hasAccessToken(refreshResponse.body)).toBe(true);
   });
 
   it('/auth/refresh (POST) fail when cookie missing', () => {
