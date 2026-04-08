@@ -46,7 +46,7 @@ export class ResetPasswordUseCase {
       throw new BusinessException(AuthErrorCode.PASSWORD_RESET_NOT_AVAILABLE);
     }
 
-    this.authTemporaryPasswordService.verifyTemporaryPasswordWithoutConsuming(
+    this.authTemporaryPasswordService.verifyAndConsumeTemporaryPassword(
       normalizedEmail,
       temporaryPassword,
     );
@@ -59,16 +59,19 @@ export class ResetPasswordUseCase {
 
     try {
       await repo.save(user);
-      await this.refreshTokenStore.revokeToken(
-        user.usrId,
-        RevokeReason.PASSWORD_CHANGE,
-      );
-      this.authTemporaryPasswordService.consumeTemporaryPassword(
-        normalizedEmail,
-      );
-      return { ok: true };
     } catch {
       throw new BusinessException(AuthErrorCode.PASSWORD_RESET_SAVE_FAILED);
     }
+
+    try {
+      await this.refreshTokenStore.revokeToken({
+        usrId: user.usrId,
+        reason: RevokeReason.PASSWORD_CHANGE,
+      });
+    } catch {
+      throw new BusinessException(AuthErrorCode.PASSWORD_RESET_SAVE_FAILED);
+    }
+
+    return { ok: true };
   }
 }

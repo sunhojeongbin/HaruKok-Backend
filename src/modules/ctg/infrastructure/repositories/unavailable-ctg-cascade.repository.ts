@@ -6,9 +6,13 @@ import { CtgCascadeRepositoryPort } from '../../application/ports/ctg-cascade.re
 
 @Injectable()
 export class UnavailableCtgCascadeRepository implements CtgCascadeRepositoryPort {
-  softDeleteAndReindex(category: CtgEntity, usrId: string): Promise<void> {
+  async softDeleteAndReindex(
+    category: CtgEntity,
+    usrId: string,
+  ): Promise<void> {
     void category;
     void usrId;
+    await Promise.resolve();
     throw new BusinessException(CtgErrorCode.CATEGORY_REPOSITORY_NOT_READY);
   }
 }

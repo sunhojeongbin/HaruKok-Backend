@@ -51,7 +51,11 @@ export class LogoutUseCase {
       return { ok: true };
     }
 
-    await this.refreshTokenStore.revokeToken(user.usrId, RevokeReason.LOGOUT);
+    await this.refreshTokenStore.revokeToken({
+      usrId: user.usrId,
+      jti: payload.jti,
+      reason: RevokeReason.LOGOUT,
+    });
     return { ok: true };
   }
 }

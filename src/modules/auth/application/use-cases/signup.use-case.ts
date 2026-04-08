@@ -1,11 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { QueryFailedError } from 'typeorm';
 import { BusinessException } from '../../../../common/exceptions/business.exception';
 import {
   normalizeAuthEmail,
   normalizeAuthName,
 } from '../../domain/policies/auth-normalization.policy';
 import { AuthErrorCode } from '../../errors/auth-error-code';
+import { throwIfAuthDuplicatePersistenceError } from '../policies/auth-persistence-error.policy';
 import { AuthPasswordService } from '../../services/auth-password.service';
 import { AuthTokenService } from '../../services/auth-token.service';
 import { UserInfo } from '../../types/auth.types';
@@ -28,20 +28,6 @@ export class SignupUseCase {
       throw new BusinessException(AuthErrorCode.USER_REPOSITORY_NOT_READY);
     }
     return this.usrRepository;
-  }
-
-  private isUniqueViolation(error: unknown): boolean {
-    if (!(error instanceof QueryFailedError)) {
-      return false;
-    }
-
-    const driverError = (error as { driverError?: unknown }).driverError;
-    if (!driverError || typeof driverError !== 'object') {
-      return false;
-    }
-
-    const code = (driverError as { code?: unknown }).code;
-    return code === '23505';
   }
 
   private assertSignupToken(signupToken: string): string {
@@ -104,9 +90,14 @@ export class SignupUseCase {
         name: saved.usrNm,
       };
     } catch (error: unknown) {
-      if (this.isUniqueViolation(error)) {
-        throw new BusinessException(AuthErrorCode.SIGNUP_ALREADY_EXISTS);
+      try {
+        throwIfAuthDuplicatePersistenceError(error);
+      } catch (translatedError: unknown) {
+        if (translatedError instanceof BusinessException) {
+          throw translatedError;
+        }
       }
+
       throw new BusinessException(AuthErrorCode.SIGNUP_SAVE_FAILED);
     }
   }

@@ -1,12 +1,29 @@
 export const ROUTINE_DATE_PATTERN =
   /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
 
-/** @description 오늘 날짜를 YYYY-MM-DD 형식으로 반환한다. */
-export function getTodayRoutineDate(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
+export const ROUTINE_BUSINESS_TIMEZONE = 'Asia/Seoul';
+
+type RoutineTodayDateOptions = {
+  now?: Date;
+  timeZone?: string;
+};
+
+/** @description 오늘 날짜를 비즈니스 타임존 기준 YYYY-MM-DD 형식으로 반환한다. */
+export function getTodayRoutineDate(
+  options: RoutineTodayDateOptions = {},
+): string {
+  const now = options.now ?? new Date();
+  const timeZone = options.timeZone ?? ROUTINE_BUSINESS_TIMEZONE;
+  const dateParts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now);
+
+  const year = dateParts.find((part) => part.type === 'year')?.value ?? '0000';
+  const month = dateParts.find((part) => part.type === 'month')?.value ?? '01';
+  const day = dateParts.find((part) => part.type === 'day')?.value ?? '01';
   return `${year}-${month}-${day}`;
 }
 

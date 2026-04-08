@@ -113,6 +113,7 @@ describe('Auth UseCases', () => {
 
   let authTemporaryPasswordService: {
     sendTemporaryPassword: jest.Mock;
+    verifyAndConsumeTemporaryPassword: jest.Mock;
     verifyTemporaryPasswordWithoutConsuming: jest.Mock;
     consumeTemporaryPassword: jest.Mock;
   };
@@ -163,6 +164,7 @@ describe('Auth UseCases', () => {
 
     authTemporaryPasswordService = {
       sendTemporaryPassword: jest.fn(),
+      verifyAndConsumeTemporaryPassword: jest.fn(),
       verifyTemporaryPasswordWithoutConsuming: jest.fn(),
       consumeTemporaryPassword: jest.fn(),
     };
@@ -342,7 +344,13 @@ describe('Auth UseCases', () => {
 
       expect(result).toEqual({ ok: true });
       expect(refreshTokenStore.revokeToken.mock.calls).toEqual([
-        ['7c1e4f2a-9a6b-4a0d-8b12-3f5c6d7e8f90', RevokeReason.LOGOUT],
+        [
+          {
+            usrId: '7c1e4f2a-9a6b-4a0d-8b12-3f5c6d7e8f90',
+            jti: 'jti-1',
+            reason: RevokeReason.LOGOUT,
+          },
+        ],
       ]);
     });
   });
@@ -636,11 +644,17 @@ describe('Auth UseCases', () => {
       expect(user.failedLoginCnt).toBe(0);
       expect(user.lockedUntil).toBeNull();
       expect(refreshTokenStore.revokeToken.mock.calls).toEqual([
-        ['7c1e4f2a-9a6b-4a0d-8b12-3f5c6d7e8f90', RevokeReason.PASSWORD_CHANGE],
+        [
+          {
+            usrId: '7c1e4f2a-9a6b-4a0d-8b12-3f5c6d7e8f90',
+            reason: RevokeReason.PASSWORD_CHANGE,
+          },
+        ],
       ]);
       expect(
-        authTemporaryPasswordService.consumeTemporaryPassword.mock.calls,
-      ).toEqual([['jihoon.kim@harukok.com']]);
+        authTemporaryPasswordService.verifyAndConsumeTemporaryPassword.mock
+          .calls,
+      ).toEqual([['jihoon.kim@harukok.com', 'temp-pass']]);
     });
 
     it('저장 중 오류가 발생하면 PASSWORD_RESET_SAVE_FAILED를 던진다', async () => {
@@ -648,6 +662,27 @@ describe('Auth UseCases', () => {
       usrRepository.findByEmail.mockResolvedValue(buildUser());
       authPasswordService.hashPassword.mockResolvedValue('new-hash');
       usrRepository.save.mockRejectedValue(new Error('db error'));
+
+      const useCase = new ResetPasswordUseCase(
+        authPasswordService as unknown as AuthPasswordService,
+        authTemporaryPasswordService as unknown as AuthTemporaryPasswordService,
+        refreshTokenStore,
+        usrRepository,
+      );
+
+      await expect(
+        resolveErrorCode(() =>
+          useCase.execute('jihoon.kim@harukok.com', 'temp-pass', 'new-pass'),
+        ),
+      ).resolves.toBe(AuthErrorCode.PASSWORD_RESET_SAVE_FAILED);
+    });
+
+    it('토큰 폐기 중 오류가 발생하면 PASSWORD_RESET_SAVE_FAILED를 던진다', async () => {
+      usrRepository.isReady.mockReturnValue(true);
+      usrRepository.findByEmail.mockResolvedValue(buildUser());
+      authPasswordService.hashPassword.mockResolvedValue('new-hash');
+      usrRepository.save.mockResolvedValue(buildUser());
+      refreshTokenStore.revokeToken.mockRejectedValue(new Error('redis error'));
 
       const useCase = new ResetPasswordUseCase(
         authPasswordService as unknown as AuthPasswordService,

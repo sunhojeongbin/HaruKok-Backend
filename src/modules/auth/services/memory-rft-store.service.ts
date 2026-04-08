@@ -3,6 +3,7 @@ import * as crypto from 'crypto';
 import { RevokeReason } from '../enums/refresh-token.enum';
 import {
   AuthRefreshTokenStoreService,
+  RevokeRefreshTokenParams,
   UpsertRefreshTokenParams,
   VerifyRefreshTokenParams,
 } from './rft-store.service';
@@ -65,16 +66,20 @@ export class InMemoryAuthRefreshTokenStoreService extends AuthRefreshTokenStoreS
     );
   }
 
-  revokeToken(usrId: string, reason: RevokeReason): Promise<void> {
-    const token = this.store.get(usrId);
+  revokeToken(params: RevokeRefreshTokenParams): Promise<void> {
+    const token = this.store.get(params.usrId);
     if (!token || token.isRevoked) {
+      return Promise.resolve();
+    }
+
+    if (params.jti && token.jti !== params.jti) {
       return Promise.resolve();
     }
 
     token.isRevoked = true;
     token.revokedAt = new Date();
-    token.revokeReason = reason;
-    this.store.set(usrId, token);
+    token.revokeReason = params.reason;
+    this.store.set(params.usrId, token);
     return Promise.resolve();
   }
 }

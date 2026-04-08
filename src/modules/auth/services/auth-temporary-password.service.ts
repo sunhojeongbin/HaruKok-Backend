@@ -153,6 +153,14 @@ export class AuthTemporaryPasswordService {
     this.temporaryPasswordStore.delete(normalizedEmail);
   }
 
+  /** @description 임시 비밀번호를 원자적으로 검증하고 소비(삭제)한다. */
+  verifyAndConsumeTemporaryPassword(
+    normalizedEmail: string,
+    temporaryPassword: string,
+  ): void {
+    this.verifyTemporaryPassword(normalizedEmail, temporaryPassword);
+  }
+
   /** @description 임시 비밀번호를 검증하지만 삭제하지 않는다. */
   verifyTemporaryPasswordWithoutConsuming(
     normalizedEmail: string,

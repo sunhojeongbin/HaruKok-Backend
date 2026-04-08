@@ -24,6 +24,7 @@ import { SignupUseCase } from './application/use-cases/signup.use-case';
 import { VerifyEmailCodeUseCase } from './application/use-cases/verify-email-code.use-case';
 import { RftEntity } from './entities/rft.entity';
 import { InMemoryEmailCodeStore } from './infrastructure/stores/in-memory-email-code.store';
+import { RedisEmailCodeStore } from './infrastructure/stores/redis-email-code.store';
 import { AuthEmailCodeService } from './application/services/auth-email-code.service';
 import { AuthFallbackService } from './services/auth-fallback.service';
 import { AuthPasswordService } from './services/auth-password.service';
@@ -57,6 +58,33 @@ const refreshTokenStoreProviders =
         },
       ];
 
+const nodeEnv = (process.env.NODE_ENV ?? 'development').toLowerCase();
+const isLocalOrTestEnv =
+  nodeEnv === 'development' ||
+  nodeEnv === 'dev' ||
+  nodeEnv === 'test' ||
+  nodeEnv === 'local';
+
+const emailCodeStoreProviders = isLocalOrTestEnv
+  ? [
+      InMemoryEmailCodeStore,
+      {
+        provide: EMAIL_CODE_STORE,
+        useExisting: InMemoryEmailCodeStore,
+      },
+    ]
+  : [
+      RedisEmailCodeStore,
+      {
+        provide: EMAIL_CODE_STORE,
+        useExisting: RedisEmailCodeStore,
+      },
+    ];
+
+const emailCodeStoreExports = isLocalOrTestEnv
+  ? [EMAIL_CODE_STORE, InMemoryEmailCodeStore]
+  : [EMAIL_CODE_STORE, RedisEmailCodeStore];
+
 /**
  * @description 인증 도메인 모듈
  */
@@ -87,11 +115,7 @@ const refreshTokenStoreProviders =
     GetUserByIdUseCase,
     AuthTokenService,
     AuthPasswordService,
-    InMemoryEmailCodeStore,
-    {
-      provide: EMAIL_CODE_STORE,
-      useExisting: InMemoryEmailCodeStore,
-    },
+    ...emailCodeStoreProviders,
     AuthEmailCodeService,
     AuthTemporaryPasswordService,
     AuthFallbackService,
@@ -99,6 +123,7 @@ const refreshTokenStoreProviders =
     JwtStrategy,
     JwtAuthGuard,
   ],
+  exports: [...emailCodeStoreExports],
 })
 export class AuthModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {

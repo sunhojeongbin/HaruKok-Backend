@@ -17,8 +17,14 @@ export type VerifyRefreshTokenParams = {
   jti: string;
 };
 
+export type RevokeRefreshTokenParams = {
+  usrId: string;
+  reason: RevokeReason;
+  jti?: string;
+};
+
 export abstract class AuthRefreshTokenStoreService {
   abstract upsertToken(params: UpsertRefreshTokenParams): Promise<void>;
   abstract verifyToken(params: VerifyRefreshTokenParams): Promise<boolean>;
-  abstract revokeToken(usrId: string, reason: RevokeReason): Promise<void>;
+  abstract revokeToken(params: RevokeRefreshTokenParams): Promise<void>;
 }

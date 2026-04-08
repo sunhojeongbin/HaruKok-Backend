@@ -192,6 +192,21 @@ describe('Rtn UseCases', () => {
       ).resolves.toBe(RtnErrorCode.ROUTINE_CATEGORY_NOT_FOUND);
     });
 
+    it('루틴 조회 저장소 오류도 ROUTINE_UPDATE_FAILED로 변환한다', async () => {
+      rtnRepository.findByIdAndUser.mockRejectedValue(new Error('db error'));
+      const useCase = new UpdateRtnUseCase(rtnRepository);
+
+      await expect(
+        resolveErrorCode(() =>
+          useCase.execute(
+            '7c1e4f2a-9a6b-4a0d-8b12-3f5c6d7e8f90',
+            '6e3b17f6-ac90-42cc-e38d-6f708192a3b4',
+            { rtnContent: '새 루틴' },
+          ),
+        ),
+      ).resolves.toBe(RtnErrorCode.ROUTINE_UPDATE_FAILED);
+    });
+
     it('수정 성공 시 updateFromToday를 호출하고 결과를 반환한다', async () => {
       rtnRepository.findByIdAndUser.mockResolvedValue(buildRoutine());
       rtnRepository.isCategoryOwnedByUser.mockResolvedValue(true);

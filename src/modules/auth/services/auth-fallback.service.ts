@@ -116,10 +116,10 @@ export class AuthFallbackService {
     if (!this.allowFallbackUser) {
       return;
     }
-    await this.refreshTokenStore.revokeToken(
-      this.fallbackUser.id,
-      RevokeReason.LOGOUT,
-    );
+    await this.refreshTokenStore.revokeToken({
+      usrId: this.fallbackUser.id,
+      reason: RevokeReason.LOGOUT,
+    });
   }
 
   /** @description DB 비활성화 테스트 환경용 fallback 사용자 조회 */
