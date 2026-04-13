@@ -27,11 +27,13 @@ export class GetUserByIdUseCase {
     if (!user) {
       return null;
     }
+    const frdCnt = await this.usrRepository.countAcceptedFrds(userId);
 
     return {
       id: user.usrId,
       name: user.usrNm,
       email: user.usrEmail ?? '',
+      frdCnt,
     };
   }
 }

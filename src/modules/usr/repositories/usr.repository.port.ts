@@ -1,4 +1,5 @@
 import { UsrEntity } from '../entities/usr.entity';
+import { TodoDashboardMetrics } from '../application/types/usr-dashboard.type';
 
 export const USR_REPOSITORY = Symbol('USR_REPOSITORY');
 
@@ -12,6 +13,16 @@ export interface UsrRepositoryPort {
   findById(id: string): Promise<UsrEntity | null>;
 
   findActiveById(id: string): Promise<UsrEntity | null>;
+
+  countAcceptedFrds(userId: string): Promise<number>;
+
+  getTodoDashboardMetrics(params: {
+    usrId: string;
+    monthStartDt: string;
+    monthEndDt: string;
+    todayDt: string;
+    yesterdayDt: string;
+  }): Promise<TodoDashboardMetrics>;
 
   createAndSave(params: {
     usrEmail: string | null;
