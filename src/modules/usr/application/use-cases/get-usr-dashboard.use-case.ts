@@ -72,12 +72,12 @@ export class GetUsrDashboardUseCase {
       throw new BusinessException(AuthResponse.USER_NOT_FOUND);
     }
 
-    const frdCnt = await repo.countAcceptedFrds(userId);
     const todayDt = getTodayTodoDate();
     const yesterdayDt = addDaysToTodoDate(todayDt, -1);
     const monthRange = resolveCurrentMonthRange(todayDt);
 
     try {
+      const frdCnt = await repo.countAcceptedFrds(userId);
       const metrics = await repo.getTodoDashboardMetrics({
         usrId: userId,
         monthStartDt: monthRange.startDt,

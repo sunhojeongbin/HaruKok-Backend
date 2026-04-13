@@ -125,7 +125,7 @@ describe('Auth UseCases', () => {
       findActiveByEmail: jest.fn(),
       findById: jest.fn(),
       findActiveById: jest.fn(),
-      countAcceptedFriends: jest.fn(),
+      countAcceptedFrds: jest.fn(),
       getTodoDashboardMetrics: jest.fn(),
       createAndSave: jest.fn(),
       save: jest.fn(),
@@ -199,7 +199,7 @@ describe('Auth UseCases', () => {
     it('active user를 조회해 응답 포맷으로 반환한다', async () => {
       usrRepository.isReady.mockReturnValue(true);
       usrRepository.findActiveById.mockResolvedValue(buildUser());
-      usrRepository.countAcceptedFriends.mockResolvedValue(3);
+      usrRepository.countAcceptedFrds.mockResolvedValue(3);
 
       const useCase = new GetUserByIdUseCase(
         authFallbackService as unknown as AuthFallbackService,
@@ -214,7 +214,7 @@ describe('Auth UseCases', () => {
         id: '7c1e4f2a-9a6b-4a0d-8b12-3f5c6d7e8f90',
         name: '김지훈',
         email: 'jihoon.kim@harukok.com',
-        friendCount: 3,
+        frdCnt: 3,
       });
     });
   });
