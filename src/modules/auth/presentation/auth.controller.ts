@@ -740,6 +740,7 @@ export class AuthController {
           id: '8128ec5d-ed76-4510-89f3-d362ce6f572c',
           email: 'test@gmail.com',
           name: '홍길동',
+          friendCount: 12,
         },
       },
     },

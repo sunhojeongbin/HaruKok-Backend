@@ -1,6 +1,9 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { TodoEntity } from '../../todo/entities/todo.entity';
+import { FriendStatusCode, UsrFrdEntity } from '../entities/usr-frd.entity';
+import { TodoDashboardMetrics } from '../application/types/usr-dashboard.type';
 import { UsrEntity } from '../entities/usr.entity';
 import { UsrRepositoryPort } from './usr.repository.port';
 
@@ -71,6 +74,124 @@ export class UsrRepository implements UsrRepositoryPort {
     return this.repository.findOne({
       where: { usrId: id, isDeleted: false, usrStatCd: 'ACTIVE' },
     });
+  }
+
+  /** @description 사용자 기준 수락된 친구 수를 반환 (양방향 중복 제거) */
+  async countAcceptedFrds(userId: string): Promise<number> {
+    if (!this.repository) {
+      return 0;
+    }
+
+    const raw = await this.repository.manager
+      .createQueryBuilder(UsrFrdEntity, 'frd')
+      .select(
+        `COUNT(DISTINCT CASE WHEN frd.usr_id = :userId THEN frd.frd_usr_id ELSE frd.usr_id END)`,
+        'friendCount',
+      )
+      .where('frd.is_deleted = false')
+      .andWhere('frd.frd_stat_cd = :status', {
+        status: FriendStatusCode.ACCEPTED,
+      })
+      .andWhere('(frd.usr_id = :userId OR frd.frd_usr_id = :userId)', {
+        userId,
+      })
+      .getRawOne<{ friendCount: string | null }>();
+
+    return Number(raw?.friendCount ?? 0);
+  }
+
+  /** @description 사용자 대시보드용 투두 지표를 조회 */
+  async getTodoDashboardMetrics(params: {
+    usrId: string;
+    monthStartDt: string;
+    monthEndDt: string;
+    todayDt: string;
+    yesterdayDt: string;
+  }): Promise<TodoDashboardMetrics> {
+    if (!this.repository) {
+      return {
+        monthCompletedTodoCnt: 0,
+        monthTotalTodoCnt: 0,
+        activeDayCnt: 0,
+        perfectTodoDates: [],
+        todayCompletionRate: 0,
+        yesterdayCompletionRate: 0,
+      };
+    }
+
+    const monthRaw = await this.repository.manager
+      .createQueryBuilder(TodoEntity, 'todo')
+      .select('COUNT(*)', 'totalTodoCnt')
+      .addSelect(
+        'COALESCE(SUM(CASE WHEN todo.is_completed THEN 1 ELSE 0 END), 0)',
+        'completedTodoCnt',
+      )
+      .where('todo.usr_id = :usrId', { usrId: params.usrId })
+      .andWhere('todo.is_deleted = false')
+      .andWhere('todo.todo_date BETWEEN :monthStartDt AND :monthEndDt', {
+        monthStartDt: params.monthStartDt,
+        monthEndDt: params.monthEndDt,
+      })
+      .getRawOne<{
+        totalTodoCnt: string | null;
+        completedTodoCnt: string | null;
+      }>();
+
+    const activeDayRaw = await this.repository.manager
+      .createQueryBuilder(TodoEntity, 'todo')
+      .select('COUNT(DISTINCT todo.todo_date)', 'activeDayCnt')
+      .where('todo.usr_id = :usrId', { usrId: params.usrId })
+      .andWhere('todo.is_deleted = false')
+      .getRawOne<{ activeDayCnt: string | null }>();
+
+    const perfectRows = await this.repository.manager
+      .createQueryBuilder(TodoEntity, 'todo')
+      .select('todo.todo_date', 'todoDate')
+      .where('todo.usr_id = :usrId', { usrId: params.usrId })
+      .andWhere('todo.is_deleted = false')
+      .groupBy('todo.todo_date')
+      .having(
+        'COUNT(*) = COALESCE(SUM(CASE WHEN todo.is_completed THEN 1 ELSE 0 END), 0)',
+      )
+      .getRawMany<{ todoDate: string }>();
+
+    const dailyRows = await this.repository.manager
+      .createQueryBuilder(TodoEntity, 'todo')
+      .select('todo.todo_date', 'todoDate')
+      .addSelect('COUNT(*)', 'totalTodoCnt')
+      .addSelect(
+        'COALESCE(SUM(CASE WHEN todo.is_completed THEN 1 ELSE 0 END), 0)',
+        'completedTodoCnt',
+      )
+      .where('todo.usr_id = :usrId', { usrId: params.usrId })
+      .andWhere('todo.is_deleted = false')
+      .andWhere('todo.todo_date IN (:...targetDates)', {
+        targetDates: [params.todayDt, params.yesterdayDt],
+      })
+      .groupBy('todo.todo_date')
+      .getRawMany<{
+        todoDate: string;
+        totalTodoCnt: string | null;
+        completedTodoCnt: string | null;
+      }>();
+
+    const dailyMap = new Map(
+      dailyRows.map((row) => {
+        const total = Number(row.totalTodoCnt ?? 0);
+        const completed = Number(row.completedTodoCnt ?? 0);
+        const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+        return [row.todoDate, rate] as const;
+      }),
+    );
+
+    return {
+      monthCompletedTodoCnt: Number(monthRaw?.completedTodoCnt ?? 0),
+      monthTotalTodoCnt: Number(monthRaw?.totalTodoCnt ?? 0),
+      activeDayCnt: Number(activeDayRaw?.activeDayCnt ?? 0),
+      perfectTodoDates: perfectRows.map((row) => row.todoDate),
+      todayCompletionRate: dailyMap.get(params.todayDt) ?? 0,
+      yesterdayCompletionRate: dailyMap.get(params.yesterdayDt) ?? 0,
+    };
   }
 
   /** @description 사용자 엔티티를 생성하고 저장 */

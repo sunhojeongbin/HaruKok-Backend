@@ -132,6 +132,7 @@ export class AuthFallbackService {
       id: this.fallbackUser.id,
       name: this.fallbackUser.name,
       email: this.fallbackUser.email,
+      frdCnt: 0,
     };
   }
 }

@@ -5,6 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CtgModule } from './modules/ctg/ctg.module';
 import { RtnModule } from './modules/rtn/rtn.module';
 import { TodoModule } from './modules/todo/todo.module';
+import { UsrModule } from './modules/usr/usr.module';
 
 const databaseImports =
   process.env.SKIP_DB === 'true'
@@ -39,6 +40,7 @@ const databaseImports =
       envFilePath: [`.env.${process.env.NODE_ENV || 'development'}`, '.env'],
     }),
     AuthModule,
+    UsrModule,
     CtgModule,
     RtnModule,
     TodoModule,
