@@ -15,7 +15,7 @@ import { GetUsrDashboardUseCase } from '../application/use-cases/get-usr-dashboa
 @ApiTags('사용자')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('usr')
+@Controller('usrs')
 export class UsrController {
   constructor(
     private readonly getUsrDashboardUseCase: GetUsrDashboardUseCase,

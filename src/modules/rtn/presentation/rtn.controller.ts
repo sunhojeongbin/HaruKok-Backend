@@ -34,7 +34,7 @@ import { UpdateRtnDto } from './dtos/update-rtn.dto';
 @ApiTags('루틴')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('rtn')
+@Controller('rtns')
 export class RtnController {
   constructor(
     private readonly createRtnUseCase: CreateRtnUseCase,
@@ -165,7 +165,7 @@ export class RtnController {
   }
 
   /** @description 로그인 사용자의 동일 카테고리 내 루틴 순서 변경 API */
-  @Patch('order')
+  @Patch('orders')
   @ApiOperation({
     summary: '루틴 순서 변경',
     description:
