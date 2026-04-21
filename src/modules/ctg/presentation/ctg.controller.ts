@@ -35,7 +35,7 @@ import { UpdateCtgDto } from './dtos/update-ctg.dto';
 @ApiTags('카테고리')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('ctg')
+@Controller('ctgs')
 export class CtgController {
   constructor(
     private readonly createCtgUseCase: CreateCtgUseCase,
@@ -216,7 +216,7 @@ export class CtgController {
   }
 
   /** @description 카테고리 순서 변경 API */
-  @Patch('order')
+  @Patch('orders')
   @ApiOperation({
     summary: '카테고리 순서 변경',
     description:
