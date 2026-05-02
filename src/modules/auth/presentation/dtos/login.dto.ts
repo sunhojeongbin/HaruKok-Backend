@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
 
 /** @description 로그인 DTO */
@@ -8,7 +9,10 @@ export class LoginDto {
     example: 'test@gmail.com',
     required: true,
   })
-  @IsEmail()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.toLowerCase().trim() : value,
+  )
+  @IsEmail({}, { message: '올바른 이메일 형식으로 입력해 주세요' })
   @IsNotEmpty()
   email: string;
 

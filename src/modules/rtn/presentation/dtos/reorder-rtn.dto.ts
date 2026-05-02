@@ -9,7 +9,7 @@ export class ReorderRtnDto {
     description: '순서를 변경할 카테고리 ID',
     example: '11111111-1111-1111-1111-111111111111',
   })
-  @IsUUID('4')
+  @IsUUID('4', { message: '올바른 카테고리 ID 형식이 아닙니다' })
   ctgId: string;
 
   @ApiProperty({
@@ -20,8 +20,8 @@ export class ReorderRtnDto {
     ],
   })
   @IsArray()
-  @ArrayNotEmpty()
-  @ArrayUnique()
-  @IsUUID('4', { each: true })
+  @ArrayNotEmpty({ message: '루틴 ID는 1개 이상 입력해 주세요' })
+  @ArrayUnique({ message: '루틴 ID가 중복되었습니다' })
+  @IsUUID('4', { each: true, message: '올바른 루틴 ID 형식이 아닙니다' })
   rtnIds: string[];
 }

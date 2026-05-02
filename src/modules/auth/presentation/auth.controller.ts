@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Post,
   Get,
   HttpCode,
@@ -19,6 +20,9 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { GetUserByIdUseCase } from '../application/use-cases/get-user-by-id.use-case';
+import { UpdatePasswordUseCase } from '../application/use-cases/update-password.use-case';
+import { VerifyPasswordUseCase } from '../application/use-cases/verify-password.use-case';
+import { WithdrawUseCase } from '../application/use-cases/withdraw.use-case';
 import { LoginUseCase } from '../application/use-cases/login.use-case';
 import { LogoutUseCase } from '../application/use-cases/logout.use-case';
 import { ResendEmailCodeUseCase } from '../application/use-cases/resend-email-code.use-case';
@@ -38,6 +42,8 @@ import { VerifyEmailCodeDto } from './dtos/verify-email-code.dto';
 import { SignupDto } from './dtos/signup.dto';
 import { SendTemporaryPasswordDto } from './dtos/send-temporary-password.dto';
 import { ResetPasswordDto } from './dtos/reset-password.dto';
+import { UpdatePasswordDto } from './dtos/update-password.dto';
+import { VerifyPasswordDto } from './dtos/verify-password.dto';
 import { DeviceType } from '../enums/refresh-token.enum';
 import { Request, Response } from 'express';
 import {
@@ -65,6 +71,9 @@ export class AuthController {
     private readonly refreshUseCase: RefreshUseCase,
     private readonly logoutUseCase: LogoutUseCase,
     private readonly getUserByIdUseCase: GetUserByIdUseCase,
+    private readonly updatePasswordUseCase: UpdatePasswordUseCase,
+    private readonly verifyPasswordUseCase: VerifyPasswordUseCase,
+    private readonly withdrawUseCase: WithdrawUseCase,
   ) {}
 
   /** @description 요청 기반 클라이언트 접속 정보를 추출한다. */
@@ -785,6 +794,227 @@ export class AuthController {
       user,
       AuthResponse.USER_FOUND.message,
       AuthResponse.USER_FOUND.httpCode,
+    );
+  }
+
+  /** @description 현재 로그인된 사용자의 비밀번호를 변경하는 API */
+  @Post('me/update-pw')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '비밀번호 변경',
+    description:
+      '현재 비밀번호를 확인한 뒤 새 비밀번호로 변경합니다. 기존 비밀번호와 동일한 비밀번호로는 변경할 수 없습니다. 변경 성공 시 모든 세션이 만료됩니다.',
+  })
+  @ApiBody({
+    type: UpdatePasswordDto,
+  })
+  @ApiResponse({
+    status: 200,
+    description: '비밀번호 변경 성공',
+    schema: {
+      example: {
+        httpCode: 200,
+        message: AuthResponse.UPDATE_PASSWORD_SUCCESS.message,
+        success: true,
+        data: { ok: true },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '소셜 로그인 계정 또는 동일한 비밀번호',
+    schema: {
+      example: {
+        httpCode: 400,
+        message: AuthResponse.UPDATE_PASSWORD_SAME_AS_CURRENT.message,
+        success: false,
+        errorCode: AuthResponse.UPDATE_PASSWORD_SAME_AS_CURRENT.errorCode,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: '현재 비밀번호 불일치',
+    schema: {
+      example: {
+        httpCode: 401,
+        message: AuthResponse.UPDATE_PASSWORD_WRONG_CURRENT.message,
+        success: false,
+        errorCode: AuthResponse.UPDATE_PASSWORD_WRONG_CURRENT.errorCode,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: '사용자 없음',
+    schema: {
+      example: {
+        httpCode: 404,
+        message: AuthResponse.USER_NOT_FOUND.message,
+        success: false,
+        errorCode: AuthResponse.USER_NOT_FOUND.errorCode,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 500,
+    description: '비밀번호 변경 실패',
+    schema: {
+      example: {
+        httpCode: 500,
+        message: AuthResponse.UPDATE_PASSWORD_SAVE_FAILED.message,
+        success: false,
+        errorCode: AuthResponse.UPDATE_PASSWORD_SAVE_FAILED.errorCode,
+      },
+    },
+  })
+  async updatePassword(
+    @NestRequest() req: { user?: { userId?: string } },
+    @Body() dto: UpdatePasswordDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new UnauthorizedException('인증에 실패했습니다.');
+    }
+
+    const result = await this.updatePasswordUseCase.execute(
+      userId,
+      dto.currentPassword,
+      dto.newPassword,
+    );
+    res.clearCookie('refreshToken', this.buildRefreshTokenCookieOptions());
+
+    return ApiResponseDto.success(
+      result,
+      AuthResponse.UPDATE_PASSWORD_SUCCESS.message,
+      AuthResponse.UPDATE_PASSWORD_SUCCESS.httpCode,
+    );
+  }
+
+  /** @description 현재 로그인된 사용자의 비밀번호 일치 여부를 확인하는 API */
+  @Post('me/check-pw')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '비밀번호 확인',
+    description:
+      '현재 로그인된 사용자의 비밀번호가 일치하는지 확인합니다. 소셜 로그인 사용자는 항상 false를 반환합니다.',
+  })
+  @ApiBody({
+    schema: {
+      example: { password: 'myPassw0rd!' },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: '비밀번호 확인 성공',
+    schema: {
+      example: {
+        httpCode: 200,
+        message: AuthResponse.VERIFY_PASSWORD_SUCCESS.message,
+        success: true,
+        data: { matched: true },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: '사용자 없음',
+    schema: {
+      example: {
+        httpCode: 404,
+        message: AuthResponse.USER_NOT_FOUND.message,
+        success: false,
+        errorCode: AuthResponse.USER_NOT_FOUND.errorCode,
+      },
+    },
+  })
+  async verifyPassword(
+    @NestRequest() req: { user?: { userId?: string } },
+    @Body() dto: VerifyPasswordDto,
+  ) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new UnauthorizedException('인증에 실패했습니다.');
+    }
+
+    const result = await this.verifyPasswordUseCase.execute(
+      userId,
+      dto.password,
+    );
+
+    return ApiResponseDto.success(
+      result,
+      AuthResponse.VERIFY_PASSWORD_SUCCESS.message,
+      AuthResponse.VERIFY_PASSWORD_SUCCESS.httpCode,
+    );
+  }
+
+  /** @description 현재 로그인된 사용자의 계정을 탈퇴 처리하는 API */
+  @Delete('me')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '회원 탈퇴',
+    description: 'JWT AccessToken으로 인증된 사용자를 탈퇴 처리합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '회원 탈퇴 성공',
+    schema: {
+      example: {
+        httpCode: 200,
+        message: '회원 탈퇴가 완료됐어요. 이용해 주셔서 감사해요.',
+        success: true,
+        data: { ok: true },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: '사용자 없음',
+    schema: {
+      example: {
+        httpCode: 404,
+        message: AuthResponse.USER_NOT_FOUND.message,
+        success: false,
+        errorCode: AuthResponse.USER_NOT_FOUND.errorCode,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 500,
+    description: '탈퇴 처리 실패',
+    schema: {
+      example: {
+        httpCode: 500,
+        message: '탈퇴 처리 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.',
+        success: false,
+        errorCode: 'WITHDRAW_SAVE_FAILED',
+      },
+    },
+  })
+  async withdraw(
+    @NestRequest() req: { user?: { userId?: string } },
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new UnauthorizedException('인증에 실패했습니다.');
+    }
+
+    const result = await this.withdrawUseCase.execute(userId);
+    res.clearCookie('refreshToken', this.buildRefreshTokenCookieOptions());
+
+    return ApiResponseDto.success(
+      result,
+      AuthResponse.WITHDRAW_SUCCESS.message,
+      AuthResponse.WITHDRAW_SUCCESS.httpCode,
     );
   }
 }

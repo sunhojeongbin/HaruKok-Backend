@@ -13,6 +13,9 @@ import { getJwtModuleOptions } from '../../config/jwt.config';
 import { AuthController } from './presentation/auth.controller';
 import { EMAIL_CODE_STORE } from './application/ports/email-code-store.port';
 import { GetUserByIdUseCase } from './application/use-cases/get-user-by-id.use-case';
+import { UpdatePasswordUseCase } from './application/use-cases/update-password.use-case';
+import { VerifyPasswordUseCase } from './application/use-cases/verify-password.use-case';
+import { WithdrawUseCase } from './application/use-cases/withdraw.use-case';
 import { LoginUseCase } from './application/use-cases/login.use-case';
 import { LogoutUseCase } from './application/use-cases/logout.use-case';
 import { ResendEmailCodeUseCase } from './application/use-cases/resend-email-code.use-case';
@@ -113,6 +116,9 @@ const emailCodeStoreExports = isLocalOrTestEnv
     RefreshUseCase,
     LogoutUseCase,
     GetUserByIdUseCase,
+    UpdatePasswordUseCase,
+    VerifyPasswordUseCase,
+    WithdrawUseCase,
     AuthTokenService,
     AuthPasswordService,
     ...emailCodeStoreProviders,

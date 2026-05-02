@@ -6,6 +6,7 @@ import {
   IsUUID,
   MaxLength,
 } from 'class-validator';
+import { StripHtml } from '../../../../common/decorators/strip-html.decorator';
 
 /**
  * @description 투두 수정 요청 DTO
@@ -16,7 +17,7 @@ export class UpdateTodoDto {
     example: '11111111-1111-1111-1111-111111111111',
   })
   @IsOptional()
-  @IsUUID('4')
+  @IsUUID('4', { message: '올바른 카테고리 ID 형식이 아닙니다' })
   ctgId?: string;
 
   @ApiPropertyOptional({
@@ -25,9 +26,10 @@ export class UpdateTodoDto {
     maxLength: 255,
   })
   @IsOptional()
+  @StripHtml()
   @IsString()
   @IsNotEmpty()
-  @MaxLength(255)
+  @MaxLength(255, { message: '할 일 내용은 255자 이하로 입력해 주세요' })
   content?: string;
 
   @ApiPropertyOptional({
@@ -36,7 +38,8 @@ export class UpdateTodoDto {
     maxLength: 1000,
   })
   @IsOptional()
+  @StripHtml()
   @IsString()
-  @MaxLength(1000)
+  @MaxLength(1000, { message: '메모는 1000자 이하로 입력해 주세요' })
   memo?: string;
 }

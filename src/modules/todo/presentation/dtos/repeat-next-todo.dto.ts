@@ -17,11 +17,12 @@ export class RepeatNextTodoDto {
     type: [String],
   })
   @IsArray()
-  @ArrayMinSize(1)
-  @ArrayUnique()
+  @ArrayMinSize(1, { message: '날짜는 1개 이상 입력해 주세요' })
+  @ArrayUnique({ message: '날짜가 중복되었습니다' })
   @IsString({ each: true })
   @Matches(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, {
     each: true,
+    message: '날짜는 YYYY-MM-DD 형식으로 입력해 주세요',
   })
   dates: string[];
 }

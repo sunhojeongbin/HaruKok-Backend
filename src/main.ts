@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import type { ValidationError } from 'class-validator';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
@@ -34,6 +35,18 @@ function hasSearchKeywordValidationError(errors: ValidationError[]): boolean {
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  app.use(helmet({ contentSecurityPolicy: isProduction ? undefined : false }));
+
+  const allowedOrigins =
+    process.env.ALLOWED_ORIGINS?.split(',').map((o) => o.trim()) ?? [];
+  app.enableCors({
+    origin: allowedOrigins.length > 0 ? allowedOrigins : false,
+    credentials: true,
+    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
 
   /** @description 글로벌 Validation Pipe */
   app.useGlobalPipes(
