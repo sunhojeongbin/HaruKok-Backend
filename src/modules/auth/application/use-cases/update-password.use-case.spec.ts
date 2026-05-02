@@ -98,7 +98,7 @@ describe('UpdatePasswordUseCase', () => {
     const user = buildUsrEntity();
     usrRepository.findActiveById.mockResolvedValue(user);
     authPasswordService.verifyPassword
-      .mockResolvedValueOnce(true)  // 현재 비밀번호 확인
+      .mockResolvedValueOnce(true) // 현재 비밀번호 확인
       .mockResolvedValueOnce(false); // 새 비밀번호 동일 여부 확인
     usrRepository.save.mockResolvedValue(user);
     refreshTokenStore.revokeToken.mockResolvedValue(undefined);
@@ -153,7 +153,7 @@ describe('UpdatePasswordUseCase', () => {
   it('새 비밀번호가 현재 비밀번호와 동일하면 UPDATE_PASSWORD_SAME_AS_CURRENT를 던진다', async () => {
     usrRepository.findActiveById.mockResolvedValue(buildUsrEntity());
     authPasswordService.verifyPassword
-      .mockResolvedValueOnce(true)  // 현재 비밀번호 확인
+      .mockResolvedValueOnce(true) // 현재 비밀번호 확인
       .mockResolvedValueOnce(true); // 새 비밀번호 동일
 
     const code = await resolveErrorCode(() =>

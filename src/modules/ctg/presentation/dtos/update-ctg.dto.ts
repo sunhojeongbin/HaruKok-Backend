@@ -40,7 +40,9 @@ export class UpdateCtgDto {
   })
   @IsOptional()
   @IsString()
-  @Matches(/^#[0-9A-Fa-f]{6}$/, { message: '색상 코드는 #RRGGBB 형식으로 입력해 주세요' })
+  @Matches(/^#[0-9A-Fa-f]{6}$/, {
+    message: '색상 코드는 #RRGGBB 형식으로 입력해 주세요',
+  })
   colorCode?: string;
 
   @ApiPropertyOptional({
@@ -48,6 +50,8 @@ export class UpdateCtgDto {
     example: true,
   })
   @IsOptional()
-  @IsBoolean({ message: '카테고리 종료 여부는 true 또는 false로 입력해 주세요' })
+  @IsBoolean({
+    message: '카테고리 종료 여부는 true 또는 false로 입력해 주세요',
+  })
   isEnded?: boolean;
 }

@@ -1,5 +1,6 @@
 import { Transform } from 'class-transformer';
-import sanitizeHtml = require('sanitize-html');
+import sanitizeHtml from 'sanitize-html';
+// import sanitizeHtml = require('sanitize-html');
 
 export const StripHtml = () =>
   Transform(({ value }) => {

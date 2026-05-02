@@ -198,7 +198,7 @@ export const AuthResponse = {
     errorCode: 'UPDATE_PASSWORD_NOT_AVAILABLE',
   },
   UPDATE_PASSWORD_WRONG_CURRENT: {
-    httpCode: 401,
+    httpCode: 400,
     message: '현재 비밀번호가 올바르지 않아요. 다시 확인해 주세요.',
     errorCode: 'UPDATE_PASSWORD_WRONG_CURRENT',
   },

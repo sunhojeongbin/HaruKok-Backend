@@ -10,6 +10,8 @@ export class ListTodosQueryDto {
     example: '2026-03',
   })
   @IsOptional()
-  @Matches(/^\d{4}-(0[1-9]|1[0-2])$/, { message: '조회 월은 YYYY-MM 형식으로 입력해 주세요' })
+  @Matches(/^\d{4}-(0[1-9]|1[0-2])$/, {
+    message: '조회 월은 YYYY-MM 형식으로 입력해 주세요',
+  })
   yearMonth?: string;
 }

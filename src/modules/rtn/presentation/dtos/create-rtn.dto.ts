@@ -44,14 +44,20 @@ export class CreateRtnDto {
     description: '시작 날짜 (YYYY-MM-DD)',
     example: '2026-04-01',
   })
-  @IsDateString({}, { message: '시작 날짜는 YYYY-MM-DD 형식으로 입력해 주세요' })
+  @IsDateString(
+    {},
+    { message: '시작 날짜는 YYYY-MM-DD 형식으로 입력해 주세요' },
+  )
   startDt: string;
 
   @ApiProperty({
     description: '종료 날짜 (YYYY-MM-DD)',
     example: '2026-06-30',
   })
-  @IsDateString({}, { message: '종료 날짜는 YYYY-MM-DD 형식으로 입력해 주세요' })
+  @IsDateString(
+    {},
+    { message: '종료 날짜는 YYYY-MM-DD 형식으로 입력해 주세요' },
+  )
   endDt: string;
 
   @ApiProperty({
@@ -72,8 +78,14 @@ export class CreateRtnDto {
   @ArrayMinSize(1, { message: '반복 요일은 1개 이상 선택해 주세요' })
   @ArrayUnique({ message: '반복 요일이 중복되었습니다' })
   @IsInt({ each: true, message: '반복 요일은 정수로 입력해 주세요' })
-  @Min(0, { each: true, message: '반복 요일은 0(일)~6(토) 범위로 입력해 주세요' })
-  @Max(6, { each: true, message: '반복 요일은 0(일)~6(토) 범위로 입력해 주세요' })
+  @Min(0, {
+    each: true,
+    message: '반복 요일은 0(일)~6(토) 범위로 입력해 주세요',
+  })
+  @Max(6, {
+    each: true,
+    message: '반복 요일은 0(일)~6(토) 범위로 입력해 주세요',
+  })
   dayOfWeeks?: number[];
 
   @ApiPropertyOptional({
@@ -96,6 +108,8 @@ export class CreateRtnDto {
     example: '07:30',
   })
   @IsOptional()
-  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: '알림 시간은 HH:mm 형식으로 입력해 주세요' })
+  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, {
+    message: '알림 시간은 HH:mm 형식으로 입력해 주세요',
+  })
   alarmTime?: string;
 }
