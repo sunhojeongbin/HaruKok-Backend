@@ -35,4 +35,6 @@ export interface UsrRepositoryPort {
   }): Promise<UsrEntity>;
 
   save(usr: UsrEntity): Promise<UsrEntity>;
+
+  hardDeleteById(userId: string): Promise<void>;
 }

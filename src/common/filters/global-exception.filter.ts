@@ -7,11 +7,29 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 
-@Catch(HttpException)
+@Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
-  catch(exception: HttpException, host: ArgumentsHost) {
+  catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
+
+    // JSON 파싱 실패 (body-parser가 던지는 SyntaxError)
+    if (exception instanceof SyntaxError) {
+      return response.status(HttpStatus.BAD_REQUEST).json({
+        httpCode: HttpStatus.BAD_REQUEST,
+        message: '요청 본문의 형식이 올바르지 않습니다',
+        success: false,
+      });
+    }
+
+    // HttpException 계열이 아닌 예상치 못한 에러
+    if (!(exception instanceof HttpException)) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        httpCode: HttpStatus.INTERNAL_SERVER_ERROR,
+        message: '오류가 발생했어요. 잠시 후 다시 시도해 주세요.',
+        success: false,
+      });
+    }
 
     const status = exception.getStatus();
     const payload = exception.getResponse();

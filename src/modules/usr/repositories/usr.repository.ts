@@ -1,8 +1,11 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { RtnRptEntity } from '../../rtn/entities/rtn-rpt.entity';
+import { RtnEntity } from '../../rtn/entities/rtn.entity';
 import { TodoEntity } from '../../todo/entities/todo.entity';
 import { FriendStatusCode, UsrFrdEntity } from '../entities/usr-frd.entity';
+import { UsrSocialEntity } from '../entities/usr-social.entity';
 import { TodoDashboardMetrics } from '../application/types/usr-dashboard.type';
 import { UsrEntity } from '../entities/usr.entity';
 import { UsrRepositoryPort } from './usr.repository.port';
@@ -211,5 +214,57 @@ export class UsrRepository implements UsrRepositoryPort {
     }
 
     return this.repository.save(usr);
+  }
+
+  /** @description 사용자와 연관 데이터를 트랜잭션 내에서 하드 삭제 */
+  async hardDeleteById(userId: string): Promise<void> {
+    if (!this.repository) {
+      throw new Error('UsrRepository is not initialized');
+    }
+
+    await this.repository.manager.transaction(async (manager) => {
+      // 1. RTN_RPT (FK → RTN, NO ACTION)
+      await manager
+        .createQueryBuilder()
+        .delete()
+        .from(RtnRptEntity)
+        .where(
+          `rtn_id IN (SELECT rtn_id FROM "RTN" WHERE usr_id = :userId)`,
+          { userId },
+        )
+        .execute();
+
+      // 2. RTN (FK → USR, NO ACTION)
+      await manager
+        .createQueryBuilder()
+        .delete()
+        .from(RtnEntity)
+        .where('usr_id = :userId', { userId })
+        .execute();
+
+      // 3. USR_SOCIAL (FK → USR, NO ACTION)
+      await manager
+        .createQueryBuilder()
+        .delete()
+        .from(UsrSocialEntity)
+        .where('usr_id = :userId', { userId })
+        .execute();
+
+      // 4. USR_FRD (FK → USR on both sides, NO ACTION)
+      await manager
+        .createQueryBuilder()
+        .delete()
+        .from(UsrFrdEntity)
+        .where('usr_id = :userId OR frd_usr_id = :userId', { userId })
+        .execute();
+
+      // 5. USR → CASCADE: CTG, TODO, RFT
+      await manager
+        .createQueryBuilder()
+        .delete()
+        .from(UsrEntity)
+        .where('usr_id = :userId', { userId })
+        .execute();
+    });
   }
 }

@@ -129,6 +129,7 @@ describe('Auth UseCases', () => {
       getTodoDashboardMetrics: jest.fn(),
       createAndSave: jest.fn(),
       save: jest.fn(),
+      hardDeleteById: jest.fn(),
     };
 
     authTokenService = {

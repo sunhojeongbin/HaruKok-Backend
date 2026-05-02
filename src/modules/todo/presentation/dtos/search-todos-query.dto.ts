@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { StripHtml } from '../../../../common/decorators/strip-html.decorator';
 
 /**
  * @description 투두 검색 쿼리 DTO
@@ -10,6 +11,7 @@ export class SearchTodosQueryDto {
     example: '강릉 여행',
     maxLength: 255,
   })
+  @StripHtml()
   @IsString()
   @IsNotEmpty()
   @MaxLength(255)

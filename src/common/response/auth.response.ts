@@ -187,4 +187,43 @@ export const AuthResponse = {
       '사용자 정보를 찾지 못했어요. 다시 로그인한 뒤 다시 시도해 주세요.',
     errorCode: 'USER_NOT_FOUND',
   },
+  UPDATE_PASSWORD_SUCCESS: {
+    httpCode: 200,
+    message: '비밀번호가 변경됐어요. 다시 로그인해 주세요.',
+  },
+  UPDATE_PASSWORD_NOT_AVAILABLE: {
+    httpCode: 400,
+    message:
+      '이 계정은 비밀번호 변경을 지원하지 않아요. 가입한 소셜 로그인으로 이용해 주세요.',
+    errorCode: 'UPDATE_PASSWORD_NOT_AVAILABLE',
+  },
+  UPDATE_PASSWORD_WRONG_CURRENT: {
+    httpCode: 400,
+    message: '현재 비밀번호가 올바르지 않아요. 다시 확인해 주세요.',
+    errorCode: 'UPDATE_PASSWORD_WRONG_CURRENT',
+  },
+  UPDATE_PASSWORD_SAME_AS_CURRENT: {
+    httpCode: 400,
+    message: '현재 비밀번호와 동일한 비밀번호로는 변경할 수 없어요.',
+    errorCode: 'UPDATE_PASSWORD_SAME_AS_CURRENT',
+  },
+  UPDATE_PASSWORD_SAVE_FAILED: {
+    httpCode: 500,
+    message:
+      '비밀번호를 변경하는 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.',
+    errorCode: 'UPDATE_PASSWORD_SAVE_FAILED',
+  },
+  VERIFY_PASSWORD_SUCCESS: {
+    httpCode: 200,
+    message: '비밀번호 확인이 완료됐어요.',
+  },
+  WITHDRAW_SUCCESS: {
+    httpCode: 200,
+    message: '회원 탈퇴가 완료됐어요.',
+  },
+  WITHDRAW_SAVE_FAILED: {
+    httpCode: 500,
+    message: '탈퇴 처리 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.',
+    errorCode: 'WITHDRAW_SAVE_FAILED',
+  },
 } as const satisfies Record<string, ResponseCode>;
