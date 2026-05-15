@@ -18,17 +18,17 @@
 
 ## Tech Stack
 
-| 분류        | 기술                                     |
-| ----------- | ---------------------------------------- |
-| 프레임워크  | NestJS 11, TypeScript 5.7                |
-| ORM / DB    | TypeORM 0.3, PostgreSQL                  |
-| 캐시 / 세션 | Redis (ioredis)                          |
-| 인증        | JWT (Access + Refresh), Argon2, Passport |
-| 이메일      | Nodemailer (SMTP)                        |
-| API 문서    | Swagger UI (`/api`)                      |
-| 보안        | Helmet, sanitize-html, class-validator   |
-| 테스트      | Jest 30, Supertest                       |
-| 컨테이너    | Docker (멀티스테이지, node:20-alpine)    |
+| 분류       | 기술                                     |
+| ---------- | ---------------------------------------- |
+| 프레임워크 | NestJS 11, TypeScript 5.7                |
+| ORM / DB   | TypeORM 0.3, PostgreSQL                  |
+| cache      | Redis (ioredis)                          |
+| 인증       | JWT (Access + Refresh), Argon2, Passport |
+| 이메일     | Nodemailer (SMTP)                        |
+| API 문서   | Swagger UI (`/api`)                      |
+| 보안       | Helmet, sanitize-html, class-validator   |
+| 테스트     | Jest 30, Supertest                       |
+| 컨테이너   | Docker (멀티스테이지, node:20-alpine)    |
 
 ---
 
