@@ -80,8 +80,8 @@ export class TypeOrmCtgCascadeRepository implements CtgCascadeRepositoryPort {
         order: { sortOrder: 'ASC', createdAt: 'ASC' },
       });
 
-      for (let i = 0; i < restCategories.length; i += 1) {
-        restCategories[i].sortOrder = i;
+      for (const [i, category] of restCategories.entries()) {
+        category.sortOrder = i;
       }
 
       await manager.save(CtgEntity, restCategories);

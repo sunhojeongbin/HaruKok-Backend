@@ -47,7 +47,7 @@ export class AuthTemporaryPasswordService {
     for (let i = 0; i < this.TEMP_PASSWORD_LENGTH; i += 1) {
       password +=
         this.TEMP_PASSWORD_CHARS[
-          randomBytes[i] % this.TEMP_PASSWORD_CHARS.length
+          randomBytes[i]! % this.TEMP_PASSWORD_CHARS.length
         ];
     }
 

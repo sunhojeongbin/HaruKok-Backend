@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
+import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 
@@ -68,7 +68,7 @@ describe('Auth (e2e)', () => {
 
     const refreshResponse = await request(httpServer())
       .post('/auth/refresh')
-      .set('Cookie', refreshTokenCookie)
+      .set('Cookie', refreshTokenCookie!)
       .expect(200);
 
     expect(hasAccessToken(refreshResponse.body)).toBe(true);
@@ -100,12 +100,12 @@ describe('Auth (e2e)', () => {
 
     await request(httpServer())
       .post('/auth/logout')
-      .set('Cookie', refreshTokenCookie)
+      .set('Cookie', refreshTokenCookie!)
       .expect(200);
 
     await request(httpServer())
       .post('/auth/refresh')
-      .set('Cookie', refreshTokenCookie)
+      .set('Cookie', refreshTokenCookie!)
       .expect(401);
   });
 

@@ -62,7 +62,7 @@ describe('ErrorCode Catalog Contract', () => {
 
     for (const response of responses) {
       expect(response.errorCode).toBeDefined();
-      const resolved = findResponseCodeByErrorCode(response.errorCode);
+      const resolved = findResponseCodeByErrorCode(response.errorCode!);
       expect(resolved).toBeDefined();
       expect(resolved?.message).toBe(response.message);
       expect(resolved?.httpCode).toBe(response.httpCode);

@@ -132,7 +132,7 @@ async function bootstrap() {
               | undefined;
 
             const originalLogout = authActions?.logout;
-            if (typeof originalLogout === 'function') {
+            if (authActions && typeof originalLogout === 'function') {
               authActions.logout = (...args: unknown[]) => {
                 try {
                   localStorage.removeItem('HARUKOK_SWAGGER_ACCESS_TOKEN');

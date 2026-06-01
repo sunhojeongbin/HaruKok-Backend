@@ -38,8 +38,8 @@ export class ReorderCtgUseCase {
       reorderedCategories.push(category);
     }
 
-    for (let index = 0; index < reorderedCategories.length; index += 1) {
-      reorderedCategories[index].sortOrder = index;
+    for (const [index, category] of reorderedCategories.entries()) {
+      category.sortOrder = index;
     }
 
     try {

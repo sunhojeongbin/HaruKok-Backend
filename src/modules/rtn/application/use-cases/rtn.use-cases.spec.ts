@@ -127,8 +127,8 @@ describe('Rtn UseCases', () => {
       );
 
       expect(result).toHaveLength(2);
-      expect(result[0].rtnId).toBe('6e3b17f6-ac90-42cc-e38d-6f708192a3b4');
-      expect(result[1].rtnId).toBe('7f4c28a7-bda1-43dd-f49e-708192a3b4c5');
+      expect(result[0]!.rtnId).toBe('6e3b17f6-ac90-42cc-e38d-6f708192a3b4');
+      expect(result[1]!.rtnId).toBe('7f4c28a7-bda1-43dd-f49e-708192a3b4c5');
     });
 
     it('저장소 오류는 ROUTINE_LIST_FAILED로 변환한다', async () => {
@@ -238,7 +238,7 @@ describe('Rtn UseCases', () => {
         }),
       );
       expect(rtnRepository.updateFromToday.mock.calls).toHaveLength(1);
-      expect(rtnRepository.updateFromToday.mock.calls[0][0]).toEqual(
+      expect(rtnRepository.updateFromToday.mock.calls[0]![0]).toEqual(
         expect.objectContaining({
           usrId: '7c1e4f2a-9a6b-4a0d-8b12-3f5c6d7e8f90',
           rtnId: '6e3b17f6-ac90-42cc-e38d-6f708192a3b4',

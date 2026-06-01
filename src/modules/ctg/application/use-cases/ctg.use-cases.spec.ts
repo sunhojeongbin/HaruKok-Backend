@@ -118,8 +118,8 @@ describe('Ctg UseCases', () => {
       );
 
       expect(result).toHaveLength(2);
-      expect(result[0].ctgName).toBe('운동');
-      expect(result[1].ctgName).toBe('공부');
+      expect(result[0]!.ctgName).toBe('운동');
+      expect(result[1]!.ctgName).toBe('공부');
     });
   });
 

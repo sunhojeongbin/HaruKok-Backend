@@ -108,7 +108,9 @@ describe('UpdatePasswordUseCase', () => {
     expect(result).toEqual({ ok: true });
     expect(user.pwd).toBe('new-hashed-password');
     expect(user.pwdHash).toBe('argon2id');
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(usrRepository.save).toHaveBeenCalledWith(user);
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(refreshTokenStore.revokeToken).toHaveBeenCalledWith({
       usrId: USER_ID,
       reason: 'PASSWORD_CHANGE',
@@ -147,6 +149,7 @@ describe('UpdatePasswordUseCase', () => {
     );
 
     expect(code).toBe(AuthErrorCode.UPDATE_PASSWORD_WRONG_CURRENT);
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(usrRepository.save).not.toHaveBeenCalled();
   });
 
@@ -161,6 +164,7 @@ describe('UpdatePasswordUseCase', () => {
     );
 
     expect(code).toBe(AuthErrorCode.UPDATE_PASSWORD_SAME_AS_CURRENT);
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(usrRepository.save).not.toHaveBeenCalled();
   });
 
@@ -177,6 +181,7 @@ describe('UpdatePasswordUseCase', () => {
     );
 
     expect(code).toBe(AuthErrorCode.UPDATE_PASSWORD_SAVE_FAILED);
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(refreshTokenStore.revokeToken).not.toHaveBeenCalled();
   });
 

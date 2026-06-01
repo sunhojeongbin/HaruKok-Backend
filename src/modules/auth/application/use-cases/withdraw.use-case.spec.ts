@@ -77,6 +77,7 @@ describe('WithdrawUseCase', () => {
     const result = await makeUseCase().execute(USER_ID);
 
     expect(result).toEqual({ ok: true });
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(usrRepository.hardDeleteById).toHaveBeenCalledWith(USER_ID);
   });
 
