@@ -33,7 +33,11 @@ export function isValidRoutineDateText(dateText: string): boolean {
     return false;
   }
 
-  const [year, month, day] = dateText.split('-').map(Number);
+  const [year, month, day] = dateText.split('-').map(Number) as [
+    number,
+    number,
+    number,
+  ];
   const parsedDate = new Date(Date.UTC(year, month - 1, day));
   return (
     parsedDate.getUTCFullYear() === year &&
@@ -44,7 +48,11 @@ export function isValidRoutineDateText(dateText: string): boolean {
 
 /** @description YYYY-MM-DD 날짜에 일 수를 더해 YYYY-MM-DD로 반환한다. */
 export function addDaysToRoutineDate(dateText: string, days: number): string {
-  const [year, month, day] = dateText.split('-').map(Number);
+  const [year, month, day] = dateText.split('-').map(Number) as [
+    number,
+    number,
+    number,
+  ];
   const baseDate = new Date(Date.UTC(year, month - 1, day));
   baseDate.setUTCDate(baseDate.getUTCDate() + days);
 

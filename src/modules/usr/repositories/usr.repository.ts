@@ -228,10 +228,9 @@ export class UsrRepository implements UsrRepositoryPort {
         .createQueryBuilder()
         .delete()
         .from(RtnRptEntity)
-        .where(
-          `rtn_id IN (SELECT rtn_id FROM "RTN" WHERE usr_id = :userId)`,
-          { userId },
-        )
+        .where(`rtn_id IN (SELECT rtn_id FROM "RTN" WHERE usr_id = :userId)`, {
+          userId,
+        })
         .execute();
 
       // 2. RTN (FK → USR, NO ACTION)

@@ -67,7 +67,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const errorCode =
       typeof obj.errorCode === 'string' ? obj.errorCode : undefined;
 
-    response.status(httpCode).json({
+    return response.status(httpCode).json({
       httpCode,
       message,
       success: false,

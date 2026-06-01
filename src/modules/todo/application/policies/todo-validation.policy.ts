@@ -87,7 +87,10 @@ export function resolveTodoMonthRange(yearMonth?: string): {
     if (!TODO_YEAR_MONTH_PATTERN.test(yearMonth)) {
       throw new BusinessException(TodoErrorCode.TODO_QUERY_MONTH_INVALID);
     }
-    const [parsedYear, parsedMonth] = yearMonth.split('-').map(Number);
+    const [parsedYear, parsedMonth] = yearMonth.split('-').map(Number) as [
+      number,
+      number,
+    ];
     year = parsedYear;
     month = parsedMonth;
   } else {

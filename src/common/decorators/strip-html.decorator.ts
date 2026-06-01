@@ -1,10 +1,12 @@
-import { Transform } from 'class-transformer';
+import { Transform, type TransformFnParams } from 'class-transformer';
 import sanitizeHtml from 'sanitize-html';
-// import sanitizeHtml = require('sanitize-html');
 
 export const StripHtml = () =>
-  Transform(({ value }) => {
+  Transform((params: TransformFnParams): unknown => {
+    const value: unknown = params.value;
+
     if (typeof value !== 'string') return value;
+
     return sanitizeHtml(value, {
       allowedTags: [],
       allowedAttributes: {},

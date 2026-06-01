@@ -22,7 +22,11 @@ type RepeatStrategy = {
 };
 
 const getDayOfWeek = (dateText: string): number => {
-  const [year, month, day] = dateText.split('-').map(Number);
+  const [year, month, day] = dateText.split('-').map(Number) as [
+    number,
+    number,
+    number,
+  ];
   return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
 };
 

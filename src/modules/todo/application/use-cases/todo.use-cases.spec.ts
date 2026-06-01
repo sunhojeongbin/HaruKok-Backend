@@ -167,7 +167,7 @@ describe('Todo UseCases', () => {
       );
 
       expect(result).toEqual([{ todoDate: '2026-04-08', content: '운동' }]);
-      expect(todoRepository.searchByUserAndDateRange.mock.calls[0][1]).toBe(
+      expect(todoRepository.searchByUserAndDateRange.mock.calls[0]![1]).toBe(
         '운동',
       );
     });
@@ -516,8 +516,8 @@ describe('Todo UseCases', () => {
       );
 
       expect(result).toHaveLength(2);
-      expect(result[0].todoId).toBe('4c19f5d4-8a7e-40aa-c16b-4d5e6f708192');
-      expect(result[1].todoId).toBe('5d2a06e5-9b8f-41bb-d27c-5e6f708192a3');
+      expect(result[0]!.todoId).toBe('4c19f5d4-8a7e-40aa-c16b-4d5e6f708192');
+      expect(result[1]!.todoId).toBe('5d2a06e5-9b8f-41bb-d27c-5e6f708192a3');
     });
 
     it('저장소 오류는 TODO_REPEAT_NEXT_FAILED로 변환한다', async () => {

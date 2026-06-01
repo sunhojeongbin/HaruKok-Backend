@@ -45,8 +45,8 @@ export class ReorderRtnUseCase {
       reorderedRoutines.push(routine);
     }
 
-    for (let i = 0; i < reorderedRoutines.length; i += 1) {
-      reorderedRoutines[i].sortOrder = i;
+    for (const [i, routine] of reorderedRoutines.entries()) {
+      routine.sortOrder = i;
     }
 
     try {
