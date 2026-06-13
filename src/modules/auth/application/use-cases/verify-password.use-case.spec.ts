@@ -20,8 +20,6 @@ function buildUsrEntity(overrides: Partial<UsrEntity> = {}): UsrEntity {
     lastLoginAt: null,
     failedLoginCnt: 0,
     lockedUntil: null,
-    isDeleted: false,
-    deletedAt: null,
     createdAt: now,
     updatedAt: now,
     usrSocials: [],

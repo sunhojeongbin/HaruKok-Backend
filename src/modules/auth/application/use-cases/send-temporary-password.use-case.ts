@@ -28,8 +28,12 @@ export class SendTemporaryPasswordUseCase {
     const repo = this.getUsrRepository();
     const user = await repo.findByEmail(normalizedEmail);
 
-    if (!user || user.joinTypeCd !== 'EMAIL') {
-      return { ok: true };
+    if (!user) {
+      throw new BusinessException(AuthErrorCode.PASSWORD_RESET_USER_NOT_FOUND);
+    }
+
+    if (user.joinTypeCd !== 'EMAIL') {
+      throw new BusinessException(AuthErrorCode.PASSWORD_RESET_NOT_AVAILABLE);
     }
 
     await this.authTemporaryPasswordService.sendTemporaryPassword(

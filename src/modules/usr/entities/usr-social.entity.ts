@@ -107,7 +107,7 @@ export class UsrSocialEntity {
   updatedAt: Date;
 
   @ManyToOne(() => UsrEntity, (usr) => usr.usrSocials, {
-    onDelete: 'NO ACTION',
+    onDelete: 'CASCADE',
     onUpdate: 'NO ACTION',
   })
   @JoinColumn({ name: 'usr_id', referencedColumnName: 'usrId' })

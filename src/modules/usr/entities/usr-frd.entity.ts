@@ -104,11 +104,11 @@ export class UsrFrdEntity {
   })
   isDeleted: boolean;
 
-  @ManyToOne(() => UsrEntity, { onDelete: 'NO ACTION', onUpdate: 'NO ACTION' })
+  @ManyToOne(() => UsrEntity, { onDelete: 'CASCADE', onUpdate: 'NO ACTION' })
   @JoinColumn({ name: 'usr_id', referencedColumnName: 'usrId' })
   usr: UsrEntity;
 
-  @ManyToOne(() => UsrEntity, { onDelete: 'NO ACTION', onUpdate: 'NO ACTION' })
+  @ManyToOne(() => UsrEntity, { onDelete: 'CASCADE', onUpdate: 'NO ACTION' })
   @JoinColumn({ name: 'frd_usr_id', referencedColumnName: 'usrId' })
   frdUsr: UsrEntity;
 }
