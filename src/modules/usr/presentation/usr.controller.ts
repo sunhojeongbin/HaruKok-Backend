@@ -24,8 +24,7 @@ export class UsrController {
   @Get('dashboard')
   @ApiOperation({
     summary: '마이페이지 대시보드 조회',
-    description:
-      '로그인 사용자의 프로필/이번 달 달성 현황/전체 기간 투두 현황을 조회합니다.',
+    description: '로그인한 사용자의 이번 달 투두 현황을 조회합니다.',
   })
   @ApiResponse({
     status: 200,
@@ -36,29 +35,15 @@ export class UsrController {
         message: UsrResponse.DASHBOARD_FOUND.message,
         success: true,
         data: {
-          usrSummary: {
-            usrId: '8128ec5d-ed76-4510-89f3-d362ce6f572c',
-            usrNm: '홍길동',
-            usrEmail: 'test12@gmail.com',
-            frdCnt: 12,
-          },
           monthRange: {
-            yearMonth: '2026-04',
-            startDt: '2026-04-01',
-            endDt: '2026-04-30',
+            startDt: '2026. 04. 01',
+            endDt: '2026. 04. 30',
           },
           monthTodoSummary: {
             todoCompletionRate: 70,
             completedTodoCnt: 42,
             remainingTodoCnt: 18,
             totalTodoCnt: 60,
-          },
-          todoStatusSummary: {
-            activeDayCnt: 124,
-            streakDayCnt: 12,
-            perfectDayCnt: 38,
-            dailyAvgTodoCompletionRate: 85,
-            avgTodoCompletionRateDiff: 5,
           },
         },
       },

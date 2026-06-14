@@ -121,11 +121,11 @@ export class RtnEntity {
   })
   updatedAt: Date;
 
-  @ManyToOne(() => UsrEntity, { onDelete: 'NO ACTION', onUpdate: 'NO ACTION' })
+  @ManyToOne(() => UsrEntity, { onDelete: 'CASCADE', onUpdate: 'NO ACTION' })
   @JoinColumn({ name: 'usr_id', referencedColumnName: 'usrId' })
   usr: UsrEntity;
 
-  @ManyToOne(() => CtgEntity, { onDelete: 'NO ACTION', onUpdate: 'NO ACTION' })
+  @ManyToOne(() => CtgEntity, { onDelete: 'CASCADE', onUpdate: 'NO ACTION' })
   @JoinColumn({ name: 'ctg_id', referencedColumnName: 'ctgId' })
   ctg: CtgEntity;
 

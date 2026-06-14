@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { BusinessException } from '../../../../common/exceptions/business.exception';
 import { normalizeAuthEmail } from '../../domain/policies/auth-normalization.policy';
 import { AuthErrorCode } from '../../errors/auth-error-code';
@@ -10,6 +10,8 @@ import {
 
 @Injectable()
 export class SendTemporaryPasswordUseCase {
+  private readonly logger = new Logger(SendTemporaryPasswordUseCase.name);
+
   constructor(
     private readonly authTemporaryPasswordService: AuthTemporaryPasswordService,
     @Inject(USR_REPOSITORY)
@@ -28,7 +30,17 @@ export class SendTemporaryPasswordUseCase {
     const repo = this.getUsrRepository();
     const user = await repo.findByEmail(normalizedEmail);
 
-    if (!user || user.joinTypeCd !== 'EMAIL') {
+    if (!user) {
+      this.logger.warn(
+        `[send-temporary-password] no account for normalized email`,
+      );
+      return { ok: true };
+    }
+
+    if (user.joinTypeCd !== 'EMAIL') {
+      this.logger.warn(
+        `[send-temporary-password] non-EMAIL account (joinTypeCd=${user.joinTypeCd}) requested password reset`,
+      );
       return { ok: true };
     }
 

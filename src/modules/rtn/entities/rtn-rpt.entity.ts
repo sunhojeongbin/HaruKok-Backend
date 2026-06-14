@@ -97,7 +97,7 @@ export class RtnRptEntity {
   updatedAt: Date;
 
   @ManyToOne(() => RtnEntity, (rtn) => rtn.rtnRpts, {
-    onDelete: 'NO ACTION',
+    onDelete: 'CASCADE',
     onUpdate: 'NO ACTION',
   })
   @JoinColumn({ name: 'rtn_id', referencedColumnName: 'rtnId' })

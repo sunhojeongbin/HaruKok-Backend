@@ -20,8 +20,6 @@ export interface UsrRepositoryPort {
     usrId: string;
     monthStartDt: string;
     monthEndDt: string;
-    todayDt: string;
-    yesterdayDt: string;
   }): Promise<TodoDashboardMetrics>;
 
   createAndSave(params: {

@@ -13,9 +13,9 @@ import { UsrSocialEntity } from './usr-social.entity';
 @Entity({ name: 'USR', comment: '사용자' })
 @Index('uq_usr_01', ['usrEmail'], {
   unique: true,
-  where: '"usr_email" IS NOT NULL AND "is_deleted" = false',
+  where: '"usr_email" IS NOT NULL',
 })
-@Index('idx_usr_01', ['usrStatCd', 'isDeleted'])
+@Index('idx_usr_01', ['usrStatCd'])
 @Index('idx_usr_02', ['lockedUntil'], {
   where: '"usr_stat_cd" = \'LOCKED\'',
 })
@@ -23,10 +23,7 @@ import { UsrSocialEntity } from './usr-social.entity';
   'chk_usr_join_type',
   "\"join_type_cd\" IN ('EMAIL', 'KAKAO', 'GOOGLE', 'APPLE')",
 )
-@Check(
-  'chk_usr_stat_cd',
-  "\"usr_stat_cd\" IN ('ACTIVE', 'DORMANT', 'LOCKED', 'WITHDRAWN')",
-)
+@Check('chk_usr_stat_cd', "\"usr_stat_cd\" IN ('ACTIVE', 'DORMANT', 'LOCKED')")
 @Check('chk_usr_role_cd', "\"usr_role_cd\" IN ('USER', 'ADMIN')")
 @Check(
   'chk_usr_email_join',
@@ -41,7 +38,6 @@ import { UsrSocialEntity } from './usr-social.entity';
   'chk_usr_locked',
   '"usr_stat_cd" <> \'LOCKED\' OR "locked_until" IS NOT NULL',
 )
-@Check('chk_usr_deleted', 'NOT "is_deleted" OR "deleted_at" IS NOT NULL')
 @Check(
   'chk_usr_email_format',
   '"usr_email" IS NULL OR "usr_email" ~* \'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$\'',
@@ -148,22 +144,6 @@ export class UsrEntity {
     comment: '계정 잠금 해제 일시(UTC). NULL이면 잠금 없음',
   })
   lockedUntil: Date | null;
-
-  @Column({
-    name: 'is_deleted',
-    type: 'boolean',
-    default: false,
-    comment: '논리 삭제 여부 (TRUE: 탈퇴, FALSE: 정상)',
-  })
-  isDeleted: boolean;
-
-  @Column({
-    name: 'deleted_at',
-    type: 'timestamptz',
-    nullable: true,
-    comment: '회원 탈퇴 처리 일시(UTC)',
-  })
-  deletedAt: Date | null;
 
   @CreateDateColumn({
     name: 'created_at',

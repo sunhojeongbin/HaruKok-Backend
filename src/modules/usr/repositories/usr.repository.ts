@@ -1,11 +1,8 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { RtnRptEntity } from '../../rtn/entities/rtn-rpt.entity';
-import { RtnEntity } from '../../rtn/entities/rtn.entity';
 import { TodoEntity } from '../../todo/entities/todo.entity';
 import { FriendStatusCode, UsrFrdEntity } from '../entities/usr-frd.entity';
-import { UsrSocialEntity } from '../entities/usr-social.entity';
 import { TodoDashboardMetrics } from '../application/types/usr-dashboard.type';
 import { UsrEntity } from '../entities/usr.entity';
 import { UsrRepositoryPort } from './usr.repository.port';
@@ -42,7 +39,7 @@ export class UsrRepository implements UsrRepositoryPort {
     }
 
     return this.repository.findOne({
-      where: { usrEmail: email, isDeleted: false },
+      where: { usrEmail: email },
     });
   }
 
@@ -53,7 +50,7 @@ export class UsrRepository implements UsrRepositoryPort {
     }
 
     return this.repository.findOne({
-      where: { usrEmail: email, isDeleted: false, usrStatCd: 'ACTIVE' },
+      where: { usrEmail: email, usrStatCd: 'ACTIVE' },
     });
   }
 
@@ -64,7 +61,7 @@ export class UsrRepository implements UsrRepositoryPort {
     }
 
     return this.repository.findOne({
-      where: { usrId: id, isDeleted: false },
+      where: { usrId: id },
     });
   }
 
@@ -75,7 +72,7 @@ export class UsrRepository implements UsrRepositoryPort {
     }
 
     return this.repository.findOne({
-      where: { usrId: id, isDeleted: false, usrStatCd: 'ACTIVE' },
+      where: { usrId: id, usrStatCd: 'ACTIVE' },
     });
   }
 
@@ -108,17 +105,11 @@ export class UsrRepository implements UsrRepositoryPort {
     usrId: string;
     monthStartDt: string;
     monthEndDt: string;
-    todayDt: string;
-    yesterdayDt: string;
   }): Promise<TodoDashboardMetrics> {
     if (!this.repository) {
       return {
         monthCompletedTodoCnt: 0,
         monthTotalTodoCnt: 0,
-        activeDayCnt: 0,
-        perfectTodoDates: [],
-        todayCompletionRate: 0,
-        yesterdayCompletionRate: 0,
       };
     }
 
@@ -140,60 +131,9 @@ export class UsrRepository implements UsrRepositoryPort {
         completedTodoCnt: string | null;
       }>();
 
-    const activeDayRaw = await this.repository.manager
-      .createQueryBuilder(TodoEntity, 'todo')
-      .select('COUNT(DISTINCT todo.todo_date)', 'activeDayCnt')
-      .where('todo.usr_id = :usrId', { usrId: params.usrId })
-      .andWhere('todo.is_deleted = false')
-      .getRawOne<{ activeDayCnt: string | null }>();
-
-    const perfectRows = await this.repository.manager
-      .createQueryBuilder(TodoEntity, 'todo')
-      .select('todo.todo_date', 'todoDate')
-      .where('todo.usr_id = :usrId', { usrId: params.usrId })
-      .andWhere('todo.is_deleted = false')
-      .groupBy('todo.todo_date')
-      .having(
-        'COUNT(*) = COALESCE(SUM(CASE WHEN todo.is_completed THEN 1 ELSE 0 END), 0)',
-      )
-      .getRawMany<{ todoDate: string }>();
-
-    const dailyRows = await this.repository.manager
-      .createQueryBuilder(TodoEntity, 'todo')
-      .select('todo.todo_date', 'todoDate')
-      .addSelect('COUNT(*)', 'totalTodoCnt')
-      .addSelect(
-        'COALESCE(SUM(CASE WHEN todo.is_completed THEN 1 ELSE 0 END), 0)',
-        'completedTodoCnt',
-      )
-      .where('todo.usr_id = :usrId', { usrId: params.usrId })
-      .andWhere('todo.is_deleted = false')
-      .andWhere('todo.todo_date IN (:...targetDates)', {
-        targetDates: [params.todayDt, params.yesterdayDt],
-      })
-      .groupBy('todo.todo_date')
-      .getRawMany<{
-        todoDate: string;
-        totalTodoCnt: string | null;
-        completedTodoCnt: string | null;
-      }>();
-
-    const dailyMap = new Map(
-      dailyRows.map((row) => {
-        const total = Number(row.totalTodoCnt ?? 0);
-        const completed = Number(row.completedTodoCnt ?? 0);
-        const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
-        return [row.todoDate, rate] as const;
-      }),
-    );
-
     return {
       monthCompletedTodoCnt: Number(monthRaw?.completedTodoCnt ?? 0),
       monthTotalTodoCnt: Number(monthRaw?.totalTodoCnt ?? 0),
-      activeDayCnt: Number(activeDayRaw?.activeDayCnt ?? 0),
-      perfectTodoDates: perfectRows.map((row) => row.todoDate),
-      todayCompletionRate: dailyMap.get(params.todayDt) ?? 0,
-      yesterdayCompletionRate: dailyMap.get(params.yesterdayDt) ?? 0,
     };
   }
 
@@ -216,54 +156,20 @@ export class UsrRepository implements UsrRepositoryPort {
     return this.repository.save(usr);
   }
 
-  /** @description 사용자와 연관 데이터를 트랜잭션 내에서 하드 삭제 */
+  /**
+   * @description 사용자를 하드 삭제. 연관 데이터(CTG/RTN/RTN_RPT/TODOS/
+   * USR_SOCIAL/USR_FRD/REFRESH_TOKENS)는 FK ON DELETE CASCADE로 연쇄 삭제된다.
+   */
   async hardDeleteById(userId: string): Promise<void> {
     if (!this.repository) {
       throw new Error('UsrRepository is not initialized');
     }
 
-    await this.repository.manager.transaction(async (manager) => {
-      // 1. RTN_RPT (FK → RTN, NO ACTION)
-      await manager
-        .createQueryBuilder()
-        .delete()
-        .from(RtnRptEntity)
-        .where(`rtn_id IN (SELECT rtn_id FROM "RTN" WHERE usr_id = :userId)`, {
-          userId,
-        })
-        .execute();
-
-      // 2. RTN (FK → USR, NO ACTION)
-      await manager
-        .createQueryBuilder()
-        .delete()
-        .from(RtnEntity)
-        .where('usr_id = :userId', { userId })
-        .execute();
-
-      // 3. USR_SOCIAL (FK → USR, NO ACTION)
-      await manager
-        .createQueryBuilder()
-        .delete()
-        .from(UsrSocialEntity)
-        .where('usr_id = :userId', { userId })
-        .execute();
-
-      // 4. USR_FRD (FK → USR on both sides, NO ACTION)
-      await manager
-        .createQueryBuilder()
-        .delete()
-        .from(UsrFrdEntity)
-        .where('usr_id = :userId OR frd_usr_id = :userId', { userId })
-        .execute();
-
-      // 5. USR → CASCADE: CTG, TODO, RFT
-      await manager
-        .createQueryBuilder()
-        .delete()
-        .from(UsrEntity)
-        .where('usr_id = :userId', { userId })
-        .execute();
-    });
+    await this.repository
+      .createQueryBuilder()
+      .delete()
+      .from(UsrEntity)
+      .where('usr_id = :userId', { userId })
+      .execute();
   }
 }
