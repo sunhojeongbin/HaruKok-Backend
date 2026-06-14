@@ -24,8 +24,7 @@ export class UsrController {
   @Get('dashboard')
   @ApiOperation({
     summary: '마이페이지 대시보드 조회',
-    description:
-      '로그인한 사용자의 프로필/이번 달 달성 현황/전체 기간 투두 현황을 조회합니다.',
+    description: '로그인한 사용자의 이번 달 투두 현황을 조회합니다.',
   })
   @ApiResponse({
     status: 200,

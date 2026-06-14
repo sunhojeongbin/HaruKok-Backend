@@ -23,10 +23,7 @@ import { UsrSocialEntity } from './usr-social.entity';
   'chk_usr_join_type',
   "\"join_type_cd\" IN ('EMAIL', 'KAKAO', 'GOOGLE', 'APPLE')",
 )
-@Check(
-  'chk_usr_stat_cd',
-  "\"usr_stat_cd\" IN ('ACTIVE', 'DORMANT', 'LOCKED')",
-)
+@Check('chk_usr_stat_cd', "\"usr_stat_cd\" IN ('ACTIVE', 'DORMANT', 'LOCKED')")
 @Check('chk_usr_role_cd', "\"usr_role_cd\" IN ('USER', 'ADMIN')")
 @Check(
   'chk_usr_email_join',

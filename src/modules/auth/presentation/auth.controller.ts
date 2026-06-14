@@ -349,30 +349,6 @@ export class AuthController {
     },
   })
   @ApiResponse({
-    status: 400,
-    description: '비밀번호 재설정 불가 계정',
-    schema: {
-      example: {
-        httpCode: 400,
-        message: AuthResponse.PASSWORD_RESET_NOT_AVAILABLE.message,
-        success: false,
-        errorCode: AuthResponse.PASSWORD_RESET_NOT_AVAILABLE.errorCode,
-      },
-    },
-  })
-  @ApiResponse({
-    status: 404,
-    description: '사용자 없음',
-    schema: {
-      example: {
-        httpCode: 404,
-        message: AuthResponse.PASSWORD_RESET_USER_NOT_FOUND.message,
-        success: false,
-        errorCode: AuthResponse.PASSWORD_RESET_USER_NOT_FOUND.errorCode,
-      },
-    },
-  })
-  @ApiResponse({
     status: 500,
     description: '임시 비밀번호 전송 실패',
     schema: {

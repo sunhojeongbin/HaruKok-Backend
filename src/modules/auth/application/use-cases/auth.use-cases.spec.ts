@@ -558,6 +558,42 @@ describe('Auth UseCases', () => {
         authTemporaryPasswordService.sendTemporaryPassword.mock.calls,
       ).toEqual([['jihoon.kim@harukok.com']]);
     });
+
+    it('존재하지 않는 사용자여도 동일한 ok 응답을 반환하고 메일을 보내지 않는다', async () => {
+      usrRepository.isReady.mockReturnValue(true);
+      usrRepository.findByEmail.mockResolvedValue(null);
+
+      const useCase = new SendTemporaryPasswordUseCase(
+        authTemporaryPasswordService as unknown as AuthTemporaryPasswordService,
+        usrRepository,
+      );
+
+      const result = await useCase.execute('unknown@harukok.com');
+
+      expect(result).toEqual({ ok: true });
+      expect(
+        authTemporaryPasswordService.sendTemporaryPassword,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('EMAIL 가입이 아니어도 동일한 ok 응답을 반환하고 메일을 보내지 않는다', async () => {
+      usrRepository.isReady.mockReturnValue(true);
+      usrRepository.findByEmail.mockResolvedValue(
+        buildUser({ joinTypeCd: 'KAKAO' }),
+      );
+
+      const useCase = new SendTemporaryPasswordUseCase(
+        authTemporaryPasswordService as unknown as AuthTemporaryPasswordService,
+        usrRepository,
+      );
+
+      const result = await useCase.execute('jihoon.kim@harukok.com');
+
+      expect(result).toEqual({ ok: true });
+      expect(
+        authTemporaryPasswordService.sendTemporaryPassword,
+      ).not.toHaveBeenCalled();
+    });
   });
 
   describe('ResetPasswordUseCase', () => {
