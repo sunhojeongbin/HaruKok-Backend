@@ -19,6 +19,8 @@ import { WithdrawUseCase } from './application/use-cases/withdraw.use-case';
 import { LoginUseCase } from './application/use-cases/login.use-case';
 import { LogoutUseCase } from './application/use-cases/logout.use-case';
 import { ResendEmailCodeUseCase } from './application/use-cases/resend-email-code.use-case';
+import { RequestEmailChangeUseCase } from './application/use-cases/request-email-change.use-case';
+import { ConfirmEmailChangeUseCase } from './application/use-cases/confirm-email-change.use-case';
 import { RefreshUseCase } from './application/use-cases/refresh.use-case';
 import { ResetPasswordUseCase } from './application/use-cases/reset-password.use-case';
 import { SendEmailCodeUseCase } from './application/use-cases/send-email-code.use-case';
@@ -109,6 +111,8 @@ const emailCodeStoreExports = isLocalOrTestEnv
     SendEmailCodeUseCase,
     ResendEmailCodeUseCase,
     VerifyEmailCodeUseCase,
+    RequestEmailChangeUseCase,
+    ConfirmEmailChangeUseCase,
     SendTemporaryPasswordUseCase,
     ResetPasswordUseCase,
     SignupUseCase,

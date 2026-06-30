@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, EntityManager, Repository } from 'typeorm';
+import { Between, EntityManager, In, Repository } from 'typeorm';
 import { CtgEntity } from '../../../ctg/entities/ctg.entity';
 import { TodoEntity } from '../../entities/todo.entity';
 import {
@@ -168,6 +168,26 @@ export class TypeOrmTodoRepository implements TodoRepositoryPort {
       },
       order: {
         todoDate: 'ASC',
+        sortOrder: 'ASC',
+        createdAt: 'ASC',
+      },
+    });
+  }
+
+  /** @description 여러 사용자의 특정 날짜 활성 투두를 일괄 조회 */
+  findTodayByUsers(usrIds: string[], date: string): Promise<TodoEntity[]> {
+    if (usrIds.length === 0) {
+      return Promise.resolve([]);
+    }
+
+    return this.repository.find({
+      where: {
+        usrId: In(usrIds),
+        isDeleted: false,
+        todoDate: date,
+      },
+      order: {
+        usrId: 'ASC',
         sortOrder: 'ASC',
         createdAt: 'ASC',
       },

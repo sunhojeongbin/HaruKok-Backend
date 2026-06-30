@@ -26,6 +26,8 @@ import { WithdrawUseCase } from '../application/use-cases/withdraw.use-case';
 import { LoginUseCase } from '../application/use-cases/login.use-case';
 import { LogoutUseCase } from '../application/use-cases/logout.use-case';
 import { ResendEmailCodeUseCase } from '../application/use-cases/resend-email-code.use-case';
+import { RequestEmailChangeUseCase } from '../application/use-cases/request-email-change.use-case';
+import { ConfirmEmailChangeUseCase } from '../application/use-cases/confirm-email-change.use-case';
 import { RefreshUseCase } from '../application/use-cases/refresh.use-case';
 import { ResetPasswordUseCase } from '../application/use-cases/reset-password.use-case';
 import { SendEmailCodeUseCase } from '../application/use-cases/send-email-code.use-case';
@@ -64,6 +66,8 @@ export class AuthController {
     private readonly sendEmailCodeUseCase: SendEmailCodeUseCase,
     private readonly resendEmailCodeUseCase: ResendEmailCodeUseCase,
     private readonly verifyEmailCodeUseCase: VerifyEmailCodeUseCase,
+    private readonly requestEmailChangeUseCase: RequestEmailChangeUseCase,
+    private readonly confirmEmailChangeUseCase: ConfirmEmailChangeUseCase,
     private readonly sendTemporaryPasswordUseCase: SendTemporaryPasswordUseCase,
     private readonly resetPasswordUseCase: ResetPasswordUseCase,
     private readonly signupUseCase: SignupUseCase,
@@ -316,6 +320,177 @@ export class AuthController {
       result,
       AuthResponse.EMAIL_CODE_VERIFIED.message,
       AuthResponse.EMAIL_CODE_VERIFIED.httpCode,
+    );
+  }
+
+  /** @description 현재 로그인된 사용자가 변경할 새 이메일로 인증 번호를 전송하는 API */
+  @Post('me/email/change/send')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '이메일 변경 인증 번호 전송',
+    description:
+      '변경할 새 이메일로 6자리 인증 번호를 전송합니다. 이미 가입된 이메일이거나 현재 이메일과 동일하면 전송되지 않습니다.',
+  })
+  @ApiBody({
+    schema: {
+      example: {
+        email: 'new@example.com',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: '인증 번호 전송 성공',
+    schema: {
+      example: {
+        httpCode: 200,
+        message: AuthResponse.EMAIL_CODE_SENT.message,
+        success: true,
+        data: { ok: true },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '현재 사용 중인 이메일과 동일',
+    schema: {
+      example: {
+        httpCode: 400,
+        message: AuthResponse.EMAIL_CHANGE_SAME_AS_CURRENT.message,
+        success: false,
+        errorCode: AuthResponse.EMAIL_CHANGE_SAME_AS_CURRENT.errorCode,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: '사용자 없음',
+    schema: {
+      example: {
+        httpCode: 404,
+        message: AuthResponse.USER_NOT_FOUND.message,
+        success: false,
+        errorCode: AuthResponse.USER_NOT_FOUND.errorCode,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 409,
+    description: '이미 가입된 이메일',
+    schema: {
+      example: {
+        httpCode: 409,
+        message: AuthResponse.EMAIL_CHANGE_ALREADY_EXISTS.message,
+        success: false,
+        errorCode: AuthResponse.EMAIL_CHANGE_ALREADY_EXISTS.errorCode,
+      },
+    },
+  })
+  async sendEmailChangeCode(
+    @NestRequest() req: { user?: { userId?: string } },
+    @Body() dto: SendEmailCodeDto,
+  ) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new UnauthorizedException('인증에 실패했습니다.');
+    }
+
+    const result = await this.requestEmailChangeUseCase.execute(
+      userId,
+      dto.email,
+    );
+    return ApiResponseDto.success(
+      result,
+      AuthResponse.EMAIL_CODE_SENT.message,
+      AuthResponse.EMAIL_CODE_SENT.httpCode,
+    );
+  }
+
+  /** @description 인증 번호를 검증하고 현재 로그인된 사용자의 이메일을 변경하는 API */
+  @Post('me/email/change/verify')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '이메일 변경 인증 번호 검증 및 변경',
+    description: '새 이메일로 받은 인증 번호 검증 성공 시 이메일을 변경합니다.',
+  })
+  @ApiBody({
+    schema: {
+      example: {
+        email: 'new@example.com',
+        code: '123456',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: '이메일 변경 성공',
+    schema: {
+      example: {
+        httpCode: 200,
+        message: AuthResponse.EMAIL_CHANGE_SUCCESS.message,
+        success: true,
+        data: { ok: true },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '코드 형식/만료/불일치 또는 현재 이메일과 동일',
+    schema: {
+      example: {
+        httpCode: 400,
+        message: AuthResponse.EMAIL_CODE_EXPIRED_OR_NOT_FOUND.message,
+        success: false,
+        errorCode: 'EMAIL_CODE_EXPIRED_OR_NOT_FOUND',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: '사용자 없음',
+    schema: {
+      example: {
+        httpCode: 404,
+        message: AuthResponse.USER_NOT_FOUND.message,
+        success: false,
+        errorCode: AuthResponse.USER_NOT_FOUND.errorCode,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 409,
+    description: '이미 가입된 이메일',
+    schema: {
+      example: {
+        httpCode: 409,
+        message: AuthResponse.EMAIL_CHANGE_ALREADY_EXISTS.message,
+        success: false,
+        errorCode: AuthResponse.EMAIL_CHANGE_ALREADY_EXISTS.errorCode,
+      },
+    },
+  })
+  async verifyEmailChangeCode(
+    @NestRequest() req: { user?: { userId?: string } },
+    @Body() dto: VerifyEmailCodeDto,
+  ) {
+    const userId = req.user?.userId;
+    if (!userId) {
+      throw new UnauthorizedException('인증에 실패했습니다.');
+    }
+
+    const result = await this.confirmEmailChangeUseCase.execute(
+      userId,
+      dto.email,
+      dto.code,
+    );
+    return ApiResponseDto.success(
+      result,
+      AuthResponse.EMAIL_CHANGE_SUCCESS.message,
+      AuthResponse.EMAIL_CHANGE_SUCCESS.httpCode,
     );
   }
 

@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AuthModule } from './modules/auth/auth.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CtgModule } from './modules/ctg/ctg.module';
+import { NtfModule } from './modules/ntf/ntf.module';
 import { RtnModule } from './modules/rtn/rtn.module';
 import { TodoModule } from './modules/todo/todo.module';
 import { UsrModule } from './modules/usr/usr.module';
@@ -39,11 +41,13 @@ const databaseImports =
       isGlobal: true,
       envFilePath: [`.env.${process.env.NODE_ENV || 'development'}`, '.env'],
     }),
+    ScheduleModule.forRoot(),
     AuthModule,
     UsrModule,
     CtgModule,
     RtnModule,
     TodoModule,
+    NtfModule,
     ...databaseImports,
   ],
   controllers: [],

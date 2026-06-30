@@ -139,6 +139,25 @@ export const AuthResponse = {
     httpCode: 201,
     message: '회원가입이 완료됐어요.',
   },
+  EMAIL_CHANGE_ALREADY_EXISTS: {
+    httpCode: 409,
+    message: '이미 회원가입 된 이메일입니다. 다시 확인해주세요.',
+    errorCode: 'EMAIL_CHANGE_ALREADY_EXISTS',
+  },
+  EMAIL_CHANGE_SAME_AS_CURRENT: {
+    httpCode: 400,
+    message: '현재 사용 중인 이메일과 동일해요. 다른 이메일을 입력해 주세요.',
+    errorCode: 'EMAIL_CHANGE_SAME_AS_CURRENT',
+  },
+  EMAIL_CHANGE_SUCCESS: {
+    httpCode: 200,
+    message: '이메일이 변경됐어요.',
+  },
+  EMAIL_CHANGE_SAVE_FAILED: {
+    httpCode: 500,
+    message: '이메일을 변경하는 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.',
+    errorCode: 'EMAIL_CHANGE_SAVE_FAILED',
+  },
   SIGNUP_SAVE_FAILED: {
     httpCode: 500,
     message: '회원가입 처리 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.',
