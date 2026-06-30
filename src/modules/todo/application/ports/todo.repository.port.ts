@@ -42,6 +42,9 @@ export interface TodoRepositoryPort {
     endDate: string,
   ): Promise<TodoEntity[]>;
 
+  /** @description 여러 사용자의 특정 날짜 활성 투두를 일괄 조회 */
+  findTodayByUsers(usrIds: string[], date: string): Promise<TodoEntity[]>;
+
   searchByUserAndDateRange(
     usrId: string,
     keyword: string,

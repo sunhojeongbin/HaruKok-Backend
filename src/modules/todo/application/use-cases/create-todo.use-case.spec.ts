@@ -43,6 +43,7 @@ describe('CreateTodoUseCase', () => {
       toggleCompletionByIdAndUser: jest.fn(),
       softDeleteByIdAndUser: jest.fn(),
       findByUserAndMonth: jest.fn(),
+      findTodayByUsers: jest.fn(),
       searchByUserAndDateRange: jest.fn(),
     };
     useCase = new CreateTodoUseCase(todoRepository);

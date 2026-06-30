@@ -68,6 +68,11 @@ export class UnavailableTodoRepository implements TodoRepositoryPort {
     return this.rejectRepositoryNotReady();
   }
 
+  findTodayByUsers(_usrIds: string[], _date: string): Promise<TodoEntity[]> {
+    this.consume(_usrIds, _date);
+    return this.rejectRepositoryNotReady();
+  }
+
   searchByUserAndDateRange(
     _usrId: string,
     _keyword: string,

@@ -1,6 +1,7 @@
 import { AuthResponse } from '../response/auth.response';
 import { CommonResponse } from '../response/common.response';
 import { CtgResponse } from '../response/ctg.response';
+import { NtfResponse } from '../response/ntf.response';
 import { ResponseCode } from '../response/response-code';
 import { RtnResponse } from '../response/rtn.response';
 import { TodoResponse } from '../response/todo.response';
@@ -9,6 +10,7 @@ const catalogs = [
   AuthResponse,
   CommonResponse,
   CtgResponse,
+  NtfResponse,
   RtnResponse,
   TodoResponse,
 ] as const;
