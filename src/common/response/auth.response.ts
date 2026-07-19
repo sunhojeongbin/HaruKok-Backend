@@ -260,4 +260,19 @@ export const AuthResponse = {
     message: '구글 로그인 처리 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.',
     errorCode: 'GOOGLE_SAVE_FAILED',
   },
+  KAKAO_LOGIN_SUCCESS: {
+    httpCode: 200,
+    message: '카카오 로그인에 성공했어요.',
+  },
+  KAKAO_TOKEN_INVALID: {
+    httpCode: 401,
+    message: '카카오 로그인 정보가 올바르지 않아요. 다시 시도해 주세요.',
+    errorCode: 'KAKAO_TOKEN_INVALID',
+  },
+  KAKAO_SAVE_FAILED: {
+    httpCode: 500,
+    message:
+      '카카오 로그인 처리 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.',
+    errorCode: 'KAKAO_SAVE_FAILED',
+  },
 } as const satisfies Record<string, ResponseCode>;
