@@ -7,6 +7,8 @@ import { UsrSocialEntity } from './entities/usr-social.entity';
 import { UsrController } from './presentation/usr.controller';
 import { UsrRepository } from './repositories/usr.repository';
 import { USR_REPOSITORY } from './repositories/usr.repository.port';
+import { UsrSocialRepository } from './repositories/usr-social.repository';
+import { USR_SOCIAL_REPOSITORY } from './repositories/usr-social.repository.port';
 
 const usrDatabaseImports =
   process.env.SKIP_DB === 'true'
@@ -23,7 +25,12 @@ const usrDatabaseImports =
       provide: USR_REPOSITORY,
       useExisting: UsrRepository,
     },
+    UsrSocialRepository,
+    {
+      provide: USR_SOCIAL_REPOSITORY,
+      useExisting: UsrSocialRepository,
+    },
   ],
-  exports: [USR_REPOSITORY],
+  exports: [USR_REPOSITORY, USR_SOCIAL_REPOSITORY],
 })
 export class UsrModule {}

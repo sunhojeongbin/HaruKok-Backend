@@ -155,7 +155,8 @@ export const AuthResponse = {
   },
   EMAIL_CHANGE_SAVE_FAILED: {
     httpCode: 500,
-    message: '이메일을 변경하는 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.',
+    message:
+      '이메일을 변경하는 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.',
     errorCode: 'EMAIL_CHANGE_SAVE_FAILED',
   },
   SIGNUP_SAVE_FAILED: {
@@ -244,5 +245,19 @@ export const AuthResponse = {
     httpCode: 500,
     message: '탈퇴 처리 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.',
     errorCode: 'WITHDRAW_SAVE_FAILED',
+  },
+  GOOGLE_LOGIN_SUCCESS: {
+    httpCode: 200,
+    message: '구글 로그인에 성공했어요.',
+  },
+  GOOGLE_TOKEN_INVALID: {
+    httpCode: 401,
+    message: '구글 로그인 정보가 올바르지 않아요. 다시 시도해 주세요.',
+    errorCode: 'GOOGLE_TOKEN_INVALID',
+  },
+  GOOGLE_SAVE_FAILED: {
+    httpCode: 500,
+    message: '구글 로그인 처리 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.',
+    errorCode: 'GOOGLE_SAVE_FAILED',
   },
 } as const satisfies Record<string, ResponseCode>;

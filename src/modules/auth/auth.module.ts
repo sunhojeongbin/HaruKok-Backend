@@ -17,6 +17,7 @@ import { UpdatePasswordUseCase } from './application/use-cases/update-password.u
 import { VerifyPasswordUseCase } from './application/use-cases/verify-password.use-case';
 import { WithdrawUseCase } from './application/use-cases/withdraw.use-case';
 import { LoginUseCase } from './application/use-cases/login.use-case';
+import { GoogleLoginUseCase } from './application/use-cases/google-login.use-case';
 import { LogoutUseCase } from './application/use-cases/logout.use-case';
 import { ResendEmailCodeUseCase } from './application/use-cases/resend-email-code.use-case';
 import { RequestEmailChangeUseCase } from './application/use-cases/request-email-change.use-case';
@@ -36,6 +37,7 @@ import { AuthPasswordService } from './services/auth-password.service';
 import { AuthTemporaryPasswordService } from './services/auth-temporary-password.service';
 import { AuthRefreshTokenStoreService } from './services/rft-store.service';
 import { AuthTokenService } from './services/auth-token.service';
+import { GoogleAuthService } from './services/google-auth.service';
 import { DbAuthRefreshTokenStoreService } from './services/db-rft-store.service';
 import { InMemoryAuthRefreshTokenStoreService } from './services/memory-rft-store.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
@@ -117,6 +119,7 @@ const emailCodeStoreExports = isLocalOrTestEnv
     ResetPasswordUseCase,
     SignupUseCase,
     LoginUseCase,
+    GoogleLoginUseCase,
     RefreshUseCase,
     LogoutUseCase,
     GetUserByIdUseCase,
@@ -124,6 +127,7 @@ const emailCodeStoreExports = isLocalOrTestEnv
     VerifyPasswordUseCase,
     WithdrawUseCase,
     AuthTokenService,
+    GoogleAuthService,
     AuthPasswordService,
     ...emailCodeStoreProviders,
     AuthEmailCodeService,

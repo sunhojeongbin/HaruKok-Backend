@@ -24,6 +24,7 @@ import { UpdatePasswordUseCase } from '../application/use-cases/update-password.
 import { VerifyPasswordUseCase } from '../application/use-cases/verify-password.use-case';
 import { WithdrawUseCase } from '../application/use-cases/withdraw.use-case';
 import { LoginUseCase } from '../application/use-cases/login.use-case';
+import { GoogleLoginUseCase } from '../application/use-cases/google-login.use-case';
 import { LogoutUseCase } from '../application/use-cases/logout.use-case';
 import { ResendEmailCodeUseCase } from '../application/use-cases/resend-email-code.use-case';
 import { RequestEmailChangeUseCase } from '../application/use-cases/request-email-change.use-case';
@@ -35,6 +36,7 @@ import { SendTemporaryPasswordUseCase } from '../application/use-cases/send-temp
 import { SignupUseCase } from '../application/use-cases/signup.use-case';
 import { VerifyEmailCodeUseCase } from '../application/use-cases/verify-email-code.use-case';
 import { LoginDto } from './dtos/login.dto';
+import { GoogleLoginDto } from './dtos/google-login.dto';
 import { ApiResponseDto } from '../../../common/dto/api-response.dto';
 import { BusinessException } from '../../../common/exceptions/business.exception';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
@@ -72,6 +74,7 @@ export class AuthController {
     private readonly resetPasswordUseCase: ResetPasswordUseCase,
     private readonly signupUseCase: SignupUseCase,
     private readonly loginUseCase: LoginUseCase,
+    private readonly googleLoginUseCase: GoogleLoginUseCase,
     private readonly refreshUseCase: RefreshUseCase,
     private readonly logoutUseCase: LogoutUseCase,
     private readonly getUserByIdUseCase: GetUserByIdUseCase,
@@ -771,6 +774,68 @@ export class AuthController {
       loginData,
       AuthResponse.LOGIN_SUCCESS.message,
       AuthResponse.LOGIN_SUCCESS.httpCode,
+    );
+  }
+
+  /** @description 구글 ID 토큰으로 로그인/자동가입하는 API */
+  @Post('google')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: '구글 로그인',
+    description:
+      '클라이언트가 전달한 구글 ID 토큰을 검증합니다. 연동 이력이 없으면 자동으로 가입되며, 로그인 성공 시 `accessToken`은 응답 바디로, `refreshToken`은 HttpOnly 쿠키로 발급됩니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '구글 로그인 성공',
+    schema: {
+      example: {
+        httpCode: 200,
+        message: AuthResponse.GOOGLE_LOGIN_SUCCESS.message,
+        success: true,
+        data: {
+          id: '8128ec5d-ed76-4510-89f3-d362ce6f572c',
+          email: 'user@example.com',
+          name: '홍길동',
+          accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: '구글 토큰 검증 실패',
+    schema: {
+      example: {
+        httpCode: 401,
+        message: AuthResponse.GOOGLE_TOKEN_INVALID.message,
+        success: false,
+        errorCode: 'GOOGLE_TOKEN_INVALID',
+      },
+    },
+  })
+  async googleLogin(
+    @Body() dto: GoogleLoginDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.googleLoginUseCase.execute(
+      dto.idToken,
+      this.getClientContext(req),
+    );
+
+    const { refreshToken, refreshTokenMaxAgeMs, ...loginData } = result;
+
+    res.cookie(
+      'refreshToken',
+      refreshToken,
+      this.buildRefreshTokenCookieOptions(refreshTokenMaxAgeMs),
+    );
+
+    return ApiResponseDto.success<LoginResponseDto>(
+      loginData,
+      AuthResponse.GOOGLE_LOGIN_SUCCESS.message,
+      AuthResponse.GOOGLE_LOGIN_SUCCESS.httpCode,
     );
   }
 
