@@ -1,0 +1,165 @@
+import { Inject, Injectable } from '@nestjs/common';
+import { BusinessException } from '../../../../common/exceptions/business.exception';
+import { normalizeAuthEmail } from '../../domain/policies/auth-normalization.policy';
+import { DeviceType } from '../../enums/refresh-token.enum';
+import { AuthErrorCode } from '../../errors/auth-error-code';
+import {
+  KakaoAuthService,
+  KakaoUserProfile,
+} from '../../services/kakao-auth.service';
+import { AuthRefreshTokenStoreService } from '../../services/rft-store.service';
+import { AuthTokenService } from '../../services/auth-token.service';
+import { LoginResult } from '../../types/auth.types';
+import { UsrEntity } from '../../../usr/entities/usr.entity';
+import { UsrSocialEntity } from '../../../usr/entities/usr-social.entity';
+import {
+  USR_REPOSITORY,
+  UsrRepositoryPort,
+} from '../../../usr/repositories/usr.repository.port';
+import {
+  USR_SOCIAL_REPOSITORY,
+  UsrSocialRepositoryPort,
+} from '../../../usr/repositories/usr-social.repository.port';
+
+const KAKAO_PROVIDER_CD = 'KAKAO';
+
+type KakaoLoginContext = {
+  deviceName?: string | null;
+  deviceType?: DeviceType | null;
+  ipAddress?: string | null;
+};
+
+@Injectable()
+export class KakaoLoginUseCase {
+  constructor(
+    private readonly kakaoAuthService: KakaoAuthService,
+    private readonly authTokenService: AuthTokenService,
+    private readonly refreshTokenStore: AuthRefreshTokenStoreService,
+    @Inject(USR_REPOSITORY)
+    private readonly usrRepository: UsrRepositoryPort,
+    @Inject(USR_SOCIAL_REPOSITORY)
+    private readonly usrSocialRepository: UsrSocialRepositoryPort,
+  ) {}
+
+  execute(
+    accessToken: string,
+    context: KakaoLoginContext = {},
+  ): Promise<LoginResult> {
+    return this.login(accessToken, context);
+  }
+
+  private async login(
+    accessToken: string,
+    context: KakaoLoginContext,
+  ): Promise<LoginResult> {
+    const profile = await this.kakaoAuthService.verify(accessToken);
+
+    if (!this.usrRepository.isReady() || !this.usrSocialRepository.isReady()) {
+      throw new BusinessException(AuthErrorCode.USER_REPOSITORY_NOT_READY);
+    }
+
+    const user = await this.resolveUser(profile);
+
+    const tokenPair = this.authTokenService.issueTokenPair({
+      sub: user.usrId,
+      email: user.usrEmail ?? '',
+    });
+    await this.refreshTokenStore.upsertToken({
+      usrId: user.usrId,
+      refreshToken: tokenPair.refreshToken,
+      jti: tokenPair.jti,
+      expiresAt: tokenPair.refreshTokenExpiresAt,
+      deviceName: context.deviceName ?? null,
+      deviceType: context.deviceType ?? null,
+      ipAddress: context.ipAddress ?? null,
+      lastUsedAt: null,
+    });
+
+    user.lastLoginAt = new Date();
+    await this.usrRepository.save(user);
+
+    return {
+      id: user.usrId,
+      name: user.usrNm,
+      email: user.usrEmail ?? '',
+      accessToken: tokenPair.accessToken,
+      refreshToken: tokenPair.refreshToken,
+      refreshTokenMaxAgeMs: tokenPair.refreshTokenMaxAgeMs,
+    };
+  }
+
+  /**
+   * @description 소셜 연동 이력을 기준으로 사용자를 조회하거나,
+   * 신규 자동가입/기존 계정 자동연동을 처리해 사용자를 반환한다.
+   * 카카오는 이메일이 없을 수 있어 이메일 자동연동 분기를 email 존재 여부로 가드한다.
+   */
+  private async resolveUser(profile: KakaoUserProfile): Promise<UsrEntity> {
+    const existingSocial = await this.usrSocialRepository.findActiveByProvider(
+      KAKAO_PROVIDER_CD,
+      profile.providerUid,
+    );
+
+    // 기존 소셜 연동 사용자
+    if (existingSocial) {
+      const user = await this.usrRepository.findActiveById(
+        existingSocial.usrId,
+      );
+      if (!user) {
+        throw new BusinessException(AuthErrorCode.USER_NOT_FOUND);
+      }
+      await this.touchSocialLastLogin(existingSocial);
+      return user;
+    }
+
+    const normalizedEmail =
+      profile.email !== null ? normalizeAuthEmail(profile.email) : null;
+
+    // 이메일 제공 시 동일 이메일 기존 계정에 자동 연동
+    if (normalizedEmail !== null) {
+      const existingUser =
+        await this.usrRepository.findByEmail(normalizedEmail);
+      if (existingUser) {
+        await this.runPersistence(() =>
+          this.usrSocialRepository.linkSocialToUser({
+            usrId: existingUser.usrId,
+            providerCd: KAKAO_PROVIDER_CD,
+            providerUid: profile.providerUid,
+            providerEmail: normalizedEmail,
+          }),
+        );
+        return existingUser;
+      }
+    }
+
+    // 신규 자동가입 (이메일 미제공 시 usrEmail=null)
+    const created = await this.runPersistence(() =>
+      this.usrSocialRepository.createUserWithSocial({
+        usrEmail: normalizedEmail,
+        usrNm: profile.name,
+        providerCd: KAKAO_PROVIDER_CD,
+        providerUid: profile.providerUid,
+        providerEmail: normalizedEmail,
+      }),
+    );
+    return created.usr;
+  }
+
+  private async touchSocialLastLogin(social: UsrSocialEntity): Promise<void> {
+    try {
+      await this.usrSocialRepository.touchLastLogin(social);
+    } catch {
+      // 마지막 로그인 시각 갱신 실패는 로그인 자체를 막지 않는다.
+    }
+  }
+
+  private async runPersistence<T>(action: () => Promise<T>): Promise<T> {
+    try {
+      return await action();
+    } catch (error) {
+      if (error instanceof BusinessException) {
+        throw error;
+      }
+      throw new BusinessException(AuthErrorCode.KAKAO_SAVE_FAILED);
+    }
+  }
+}
