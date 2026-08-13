@@ -5,7 +5,7 @@ import {
   Entity,
   Index,
   OneToMany,
-  PrimaryColumn,
+  PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { UsrSocialEntity } from './usr-social.entity';
@@ -23,7 +23,10 @@ import { UsrSocialEntity } from './usr-social.entity';
   'chk_usr_join_type',
   "\"join_type_cd\" IN ('EMAIL', 'KAKAO', 'GOOGLE', 'APPLE')",
 )
-@Check('chk_usr_stat_cd', "\"usr_stat_cd\" IN ('ACTIVE', 'DORMANT', 'LOCKED')")
+@Check(
+  'chk_usr_stat_cd',
+  "\"usr_stat_cd\" IN ('ACTIVE', 'DORMANT', 'LOCKED', 'WITHDRAWN')",
+)
 @Check('chk_usr_role_cd', "\"usr_role_cd\" IN ('USER', 'ADMIN')")
 @Check(
   'chk_usr_email_join',
@@ -43,10 +46,8 @@ import { UsrSocialEntity } from './usr-social.entity';
   '"usr_email" IS NULL OR "usr_email" ~* \'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$\'',
 )
 export class UsrEntity {
-  @PrimaryColumn({
+  @PrimaryGeneratedColumn('uuid', {
     name: 'usr_id',
-    type: 'uuid',
-    default: () => 'gen_random_uuid()',
     comment: '사용자 고유 식별자',
   })
   usrId: string;

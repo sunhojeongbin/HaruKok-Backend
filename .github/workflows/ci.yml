@@ -32,3 +32,78 @@ jobs:
 
       - name: Unit Test
         run: npm run test -- --runInBand
+
+  migration:
+    name: Migration & Schema Drift
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:14-alpine
+        env:
+          POSTGRES_USER: harukok
+          POSTGRES_PASSWORD: harukok
+          POSTGRES_DB: harukok_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U harukok"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USER: harukok
+      DB_PASSWORD: harukok
+      DB_NAME: harukok_ci
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      # 백슬래시가 하나만 있으면 JS 템플릿 리터럴에서 소실되어
+      # CHECK 제약의 정규식이 조용히 무력화된다. (예: '\.' -> '.')
+      - name: Lint migration escapes
+        run: |
+          if grep -rnP '(?<!\\)\\(?!\\)' src/database/migrations/ ; then
+            echo "::error::마이그레이션에 단일 백슬래시가 있습니다. 템플릿 리터럴에서 소실되므로 '\\\\' 로 이중화하세요."
+            exit 1
+          fi
+          echo "OK - 단일 백슬래시 없음"
+
+      # 빈 DB 에 전체 마이그레이션이 순서대로 적용되는지 확인한다.
+      - name: Run migrations
+        run: npm run migration:run
+
+      - name: Show applied migrations
+        run: npm run migration:show
+
+      # 엔티티 정의와 마이그레이션 결과 스키마가 일치하는지 확인한다.
+      # 일치하면 migration:generate 는 파일을 만들지 않는다.
+      - name: Detect schema drift
+        run: |
+          npm run migration:generate -- src/database/migrations/__DriftCheck || true
+          if ls src/database/migrations/*__DriftCheck.ts >/dev/null 2>&1; then
+            echo "::error::엔티티와 마이그레이션 스키마가 어긋납니다. 아래 diff 를 마이그레이션으로 반영하세요."
+            cat src/database/migrations/*__DriftCheck.ts
+            exit 1
+          fi
+          echo "OK - 드리프트 없음"
+
+      # 롤백 경로도 동작하는지 확인한다. 마지막 마이그레이션 1건만 되돌린다.
+      - name: Verify revert
+        run: |
+          npm run migration:revert
+          npm run migration:show

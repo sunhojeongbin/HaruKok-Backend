@@ -6,7 +6,7 @@ import {
   Index,
   JoinColumn,
   ManyToOne,
-  PrimaryColumn,
+  PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { UsrEntity } from './usr.entity';
@@ -26,10 +26,8 @@ import { UsrEntity } from './usr.entity';
   "\"provider_cd\" IN ('KAKAO', 'GOOGLE', 'APPLE')",
 )
 export class UsrSocialEntity {
-  @PrimaryColumn({
+  @PrimaryGeneratedColumn('uuid', {
     name: 'social_id',
-    type: 'uuid',
-    default: () => 'gen_random_uuid()',
     comment: '소셜 연동 고유 식별자',
   })
   socialId: string;

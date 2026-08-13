@@ -6,7 +6,7 @@ import {
   Index,
   JoinColumn,
   ManyToOne,
-  PrimaryColumn,
+  PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { UsrEntity } from '../../usr/entities/usr.entity';
@@ -20,10 +20,8 @@ import { UsrEntity } from '../../usr/entities/usr.entity';
 @Check('chk_ntf_token_platform', `"platform_cd" IN ('AOS', 'IOS', 'WEB')`)
 @Check('chk_ntf_token_fcm', `btrim("fcm_token") <> ''`)
 export class NtfTokenEntity {
-  @PrimaryColumn({
+  @PrimaryGeneratedColumn('uuid', {
     name: 'ntf_token_id',
-    type: 'uuid',
-    default: () => 'gen_random_uuid()',
     comment: 'PK - 디바이스 토큰 고유 ID',
   })
   ntfTokenId: string;
