@@ -6,7 +6,7 @@ import {
   Index,
   JoinColumn,
   ManyToOne,
-  PrimaryColumn,
+  PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { CtgEntity } from '../../ctg/entities/ctg.entity';
@@ -33,10 +33,8 @@ import { UsrEntity } from '../../usr/entities/usr.entity';
 @Check('chk_todo_completed', 'NOT "is_completed" OR "completed_at" IS NOT NULL')
 @Check('chk_todo_deleted', 'NOT "is_deleted" OR "deleted_at" IS NOT NULL')
 export class TodoEntity {
-  @PrimaryColumn({
+  @PrimaryGeneratedColumn('uuid', {
     name: 'todo_id',
-    type: 'uuid',
-    default: () => 'gen_random_uuid()',
     comment: 'PK - 투두 고유 ID',
   })
   todoId: string;

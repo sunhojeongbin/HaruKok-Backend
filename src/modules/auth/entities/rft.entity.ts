@@ -6,7 +6,7 @@ import {
   Index,
   JoinColumn,
   OneToOne,
-  PrimaryColumn,
+  PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { UsrEntity } from '../../usr/entities/usr.entity';
@@ -32,10 +32,8 @@ import { DeviceType, RevokeReason } from '../enums/refresh-token.enum';
   'NOT "is_revoked" OR "revoked_at" IS NOT NULL',
 )
 export class RftEntity {
-  @PrimaryColumn({
+  @PrimaryGeneratedColumn('uuid', {
     name: 'rft_id',
-    type: 'uuid',
-    default: () => 'gen_random_uuid()',
     comment: 'PK - 토큰 고유 ID',
   })
   rftId: string;

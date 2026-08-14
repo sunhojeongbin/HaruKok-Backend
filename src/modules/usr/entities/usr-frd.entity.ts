@@ -6,7 +6,7 @@ import {
   Index,
   JoinColumn,
   ManyToOne,
-  PrimaryColumn,
+  PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { UsrEntity } from './usr.entity';
@@ -33,10 +33,8 @@ export enum FriendStatusCode {
   "\"frd_stat_cd\" IN ('PENDING', 'ACCEPTED', 'BLOCKED')",
 )
 export class UsrFrdEntity {
-  @PrimaryColumn({
+  @PrimaryGeneratedColumn('uuid', {
     name: 'frd_id',
-    type: 'uuid',
-    default: () => 'gen_random_uuid()',
     comment: '친구 관계 고유 식별자',
   })
   frdId: string;

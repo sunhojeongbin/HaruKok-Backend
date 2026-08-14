@@ -16,9 +16,6 @@ const databaseImports =
         TypeOrmModule.forRootAsync({
           inject: [ConfigService],
           useFactory: (config: ConfigService) => {
-            const isProduction =
-              (config.get<string>('NODE_ENV') ?? 'development') ===
-              'production';
             const forceSync = config.get<string>('DB_SYNCHRONIZE') === 'true';
 
             return {
@@ -29,7 +26,18 @@ const databaseImports =
               password: config.get<string>('DB_PASSWORD'),
               database: config.get<string>('DB_NAME'),
               autoLoadEntities: true,
-              synchronize: forceSync || !isProduction,
+              /**
+               * @PrimaryGeneratedColumn('uuid') 가 gen_random_uuid() 를 쓰도록 한다.
+               * data-source.ts(CLI) 와 반드시 동일하게 유지할 것 —
+               * 어긋나면 migration:generate 가 매번 불필요한 diff 를 만든다.
+               */
+              uuidExtension: 'pgcrypto' as const,
+              /**
+               * 스키마 변경은 마이그레이션으로만 반영한다.
+               * `npm run migration:generate` / `migration:run` 사용.
+               * DB_SYNCHRONIZE=true 를 명시한 경우에만 예외적으로 동기화한다.
+               */
+              synchronize: forceSync,
             };
           },
         }),
